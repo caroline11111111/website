@@ -82,13 +82,13 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ selectedCurrency, on
           <span>{formatPrice(totalPrice, selectedCurrency)}</span>
         </div>
 
-        {/* 强制硬编码文案为 Create Order */}
+        {/* 🚨 暴力红色测试按钮：用来验证当前线上网页是否真的在运行这个仓库的代码 */}
         <button
           type="submit"
           disabled={isSubmitting || items.length === 0}
-          className="w-full py-4 bg-black text-white text-xs font-semibold uppercase tracking-widest rounded-full hover:bg-gray-800 transition-all shadow-md cursor-pointer disabled:opacity-50"
+          className="w-full py-6 bg-red-600 text-white text-base font-bold uppercase tracking-widest rounded-full hover:bg-red-700 transition-all shadow-xl cursor-pointer disabled:opacity-50"
         >
-          {isSubmitting ? 'Creating Order...' : 'Create Order'}
+          {isSubmitting ? 'WORKING...' : '🚨 绝对是新版本：CREATE ORDER 🚨'}
         </button>
       </form>
     </div>
