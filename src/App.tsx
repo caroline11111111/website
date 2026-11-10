@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useCart } from './context/CartContext';
 import { useAuth } from './context/AuthContext';
 import { Product } from './config/products';
-import { currencies, formatPrice } from './config/currencies';
+import { currencies } from './config/currencies';
 
 // 导入各个页面组件
 import { Banner } from './components/Banner';
@@ -12,7 +12,7 @@ import { ProductDetailPage } from './components/ProductDetailPage';
 import { BagPage } from './components/BagPage';
 import { CheckoutPage } from './components/CheckoutPage';
 import { AccountPage } from './components/AccountPage';
-import { OrderPage } from './components/OrderPage';
+import { MyOrderPage } from './components/MyOrderPage'; // 修改点 1：引入正确的 MyOrderPage
 import { LoginPage } from './components/LoginPage';
 import { SignUpPage } from './components/SignUpPage';
 
@@ -43,7 +43,7 @@ export function App() {
           <div className="flex items-center space-x-8">
             <button 
               onClick={() => setCurrentTab('home')}
-              className="text-lg font-light tracking-widest uppercase"
+              className="text-lg font-light tracking-widest uppercase cursor-pointer"
             >
               CCC Luxury
             </button>
@@ -58,7 +58,7 @@ export function App() {
             <select
               value={selectedCurrency}
               onChange={(e) => setSelectedCurrency(e.target.value)}
-              className="bg-transparent text-xs font-semibold uppercase border border-gray-300 rounded px-2 py-1 focus:outline-none"
+              className="bg-transparent text-xs font-semibold uppercase border border-gray-300 rounded px-2 py-1 focus:outline-none cursor-pointer"
             >
               {currencies.map((c) => (
                 <option key={c.code} value={c.code}>
@@ -70,7 +70,7 @@ export function App() {
             {/* Bag 按钮 */}
             <button
               onClick={() => setCurrentTab('bag')}
-              className="relative text-xs uppercase tracking-wider font-semibold hover:opacity-70 transition-opacity"
+              className="relative text-xs uppercase tracking-wider font-semibold hover:opacity-70 transition-opacity cursor-pointer"
             >
               Bag
               {totalCartCount > 0 && (
@@ -80,19 +80,19 @@ export function App() {
               )}
             </button>
 
-            {/* Account / Login 按钮 */}
+            {/* Account / Login / Order 按钮 */}
             <button
               onClick={() => {
                 if (user) {
                   setAccountSubTab('profile');
                   setCurrentTab('account');
                 } else {
-                  setCurrentTab('login');
+                  setCurrentTab('account'); // 支持访客查看 Account/Order 状态
                 }
               }}
-              className="text-xs uppercase tracking-wider font-semibold hover:opacity-70 transition-opacity"
+              className="text-xs uppercase tracking-wider font-semibold hover:opacity-70 transition-opacity cursor-pointer"
             >
-              {user ? 'Account' : 'Login'}
+              {user ? 'Account' : 'Account'}
             </button>
           </div>
         </div>
@@ -113,7 +113,7 @@ export function App() {
             <div className="text-center pt-4">
               <button
                 onClick={() => setCurrentTab('shop')}
-                className="px-8 py-3 bg-black text-white text-xs font-semibold uppercase tracking-widest rounded-full hover:bg-gray-800 transition-all shadow-md"
+                className="px-8 py-3 bg-black text-white text-xs font-semibold uppercase tracking-widest rounded-full hover:bg-gray-800 transition-all shadow-md cursor-pointer"
               >
                 Explore Full Shop
               </button>
@@ -142,12 +142,13 @@ export function App() {
           />
         )}
 
+        {/* 关键结算路由 */}
         {currentTab === 'checkout' && (
           <CheckoutPage
             selectedCurrency={selectedCurrency}
             onOrderComplete={() => {
-              setAccountSubTab('order');
-              setCurrentTab('account');
+              // 修改点 2：下单完成后直接跳转到正确的 MyOrderPage 视图
+              setCurrentTab('myOrder');
             }}
           />
         )}
@@ -159,8 +160,9 @@ export function App() {
           />
         )}
 
-        {currentTab === 'order' && (
-          <OrderPage selectedCurrency={selectedCurrency} />
+        {/* 修改点 3：绑定正确的 MyOrderPage 组件 */}
+        {(currentTab === 'order' || currentTab === 'myOrder') && (
+          <MyOrderPage selectedCurrency={selectedCurrency} />
         )}
 
         {currentTab === 'login' && (
