@@ -11,9 +11,9 @@ export const MyOrderPage: React.FC<MyOrderPageProps> = ({ selectedCurrency }) =>
   const [orders, setOrders] = useState<Order[]>([]);
 
   useEffect(() => {
-    // 统一从 orderService / 缓存中获取订单
-    const allOrders = orderService.getOrders();
-    setOrders(allOrders);
+    // 组件加载时自动读取最新订单
+    const fetchedOrders = orderService.getOrders();
+    setOrders(fetchedOrders);
   }, []);
 
   return (
@@ -34,7 +34,6 @@ export const MyOrderPage: React.FC<MyOrderPageProps> = ({ selectedCurrency }) =>
                 <span className="px-2.5 py-1 bg-green-50 text-green-700 rounded font-semibold uppercase">{order.status}</span>
               </div>
 
-              {/* 订单商品明细 */}
               <div className="space-y-3">
                 {order.items.map((item, idx) => (
                   <div key={idx} className="flex items-center justify-between">
