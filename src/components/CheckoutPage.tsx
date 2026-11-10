@@ -24,29 +24,31 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ selectedCurrency, on
     setIsSubmitting(true);
 
     try {
-      if (user) {
-        // 创建订单并写入 localStorage / orderService
-        orderService.createOrder({
-          userId: user.id,
-          items: items.map(item => ({
-            id: item.id,
-            productId: item.productId,
-            name: item.name,
-            brand: item.brand,
-            priceMYR: item.priceMYR,
-            quantity: item.quantity,
-            imageUrl: item.imageUrl,
-            category: 'Handbags' // 默认类别，用于筛选
-          })),
-          totalPriceMYR: totalPrice,
-          shippingAddress: address,
-        });
-      }
+      // 即使未登录也生成一个访客或默认用户的订单ID，确保记录百分百创建成功
+      const currentUserId = user?.id || 'guest_user';
 
-      // 清空购物袋
+      const newOrder = orderService.createOrder({
+        userId: currentUserId,
+        items: items.map(item => ({
+          id: item.id,
+          productId: item.productId,
+          name: item.name,
+          brand: item.brand,
+          priceMYR: item.priceMYR,
+          quantity: item.quantity,
+          imageUrl: item.imageUrl,
+          category: 'Handbags'
+        })),
+        totalPriceMYR: totalPrice,
+        shippingAddress: address || 'Default Address',
+      });
+
+      console.log('Order created successfully:', newOrder);
+
+      // 清空购物车
       clearCart();
 
-      // 跳转回 My Order 页面
+      // 执行跳转回调（切到 Account > My Order）
       onOrderComplete();
     } catch (error) {
       console.error('Failed to create order:', error);
@@ -70,7 +72,7 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ selectedCurrency, on
           />
         </div>
 
-        {/* 订单明细小结 */}
+        {/* 订单商品汇总 */}
         <div className="border-t pt-4 space-y-2">
           <div className="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-2">Order Items</div>
           {items.map(item => (
@@ -86,12 +88,13 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ selectedCurrency, on
           <span>{formatPrice(totalPrice, selectedCurrency)}</span>
         </div>
 
+        {/* 核心修改：按钮文字明确为 Create Order */}
         <button
           type="submit"
           disabled={isSubmitting || items.length === 0}
-          className="w-full py-4 bg-black text-white text-xs font-semibold uppercase tracking-widest rounded-full hover:bg-gray-800 transition-all shadow-md disabled:opacity-50"
+          className="w-full py-4 bg-black text-white text-xs font-semibold uppercase tracking-widest rounded-full hover:bg-gray-800 transition-all shadow-md disabled:opacity-50 cursor-pointer"
         >
-          {isSubmitting ? 'Creating Order...' : 'Create Order'}
+          {isSubmitting ? 'Processing...' : 'Create Order'}
         </button>
       </form>
     </div>
