@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { orderService, Order } from '../services/orderService';
 import { formatPrice } from '../config/currencies';
+import { SiteImage } from './SiteImage';
 
 interface AccountPageProps {
   initialSubTab?: string;
@@ -17,10 +18,11 @@ export const AccountPage: React.FC<AccountPageProps> = ({ initialSubTab = 'profi
     setSubTab(initialSubTab);
   }, [initialSubTab]);
 
-  // 每次切换到 order 标签时实时更新列表
+  // 每次切换到 order 标签时强行拉取 ccc_orders_list 缓存
   useEffect(() => {
     if (subTab === 'order') {
-      setOrders(orderService.getOrders());
+      const fetched = orderService.getOrders();
+      setOrders(fetched);
     }
   }, [subTab]);
 
@@ -29,7 +31,10 @@ export const AccountPage: React.FC<AccountPageProps> = ({ initialSubTab = 'profi
       <div className="flex justify-between items-center border-b pb-6">
         <h1 className="text-3xl font-light">My Account</h1>
         {user && (
-          <button onClick={logout} className="text-xs uppercase tracking-wider text-red-600 hover:underline font-semibold">
+          <button
+            onClick={logout}
+            className="text-xs uppercase tracking-wider text-red-600 hover:underline font-semibold"
+          >
             Sign Out
           </button>
         )}
@@ -38,7 +43,9 @@ export const AccountPage: React.FC<AccountPageProps> = ({ initialSubTab = 'profi
       <div className="flex space-x-6 border-b border-gray-200 pb-3 text-xs uppercase tracking-widest font-semibold">
         <button
           onClick={() => setSubTab('profile')}
-          className={`pb-2 border-b-2 ${subTab === 'profile' ? 'border-black text-black' : 'border-transparent text-gray-400'}`}
+          className={`pb-2 border-b-2 ${
+            subTab === 'profile' ? 'border-black text-black' : 'border-transparent text-gray-400'
+          }`}
         >
           Profile
         </button>
@@ -47,51 +54,61 @@ export const AccountPage: React.FC<AccountPageProps> = ({ initialSubTab = 'profi
             setSubTab('order');
             setOrders(orderService.getOrders());
           }}
-          className={`pb-2 border-b-2 ${subTab === 'order' ? 'border-black text-black' : 'border-transparent text-gray-400'}`}
+          className={`pb-2 border-b-2 ${
+            subTab === 'order' ? 'border-black text-black' : 'border-transparent text-gray-400'
+          }`}
         >
           My Order
         </button>
       </div>
 
       {subTab === 'profile' && (
-        <div className="bg-white p-6 rounded border border-gray-200 max-w-md space-y-2 text-sm">
-          <p><span className="font-semibold">Name:</span> {user?.name || 'Guest User'}</p>
-          <p><span className="font-semibold">Email:</span> {user?.email || 'guest@example.com'}</p>
+        <div className="bg-white p-6 rounded-lg border border-gray-200 max-w-md space-y-2 text-sm shadow-sm">
+          <p><span className="font-semibold text-black">Name:</span> {user?.name || 'Guest User'}</p>
+          <p><span className="font-semibold text-black">Email:</span> {user?.email || 'guest@example.com'}</p>
+          <p><span className="font-semibold text-black">Address:</span> {user?.address || 'Malaysia'}</p>
         </div>
       )}
 
       {subTab === 'order' && (
-        <div className="space-y-4">
+        <div className="space-y-6">
           <h2 className="text-lg font-medium">Order History ({orders.length})</h2>
           {orders.length === 0 ? (
-            <div className="p-8 text-center bg-white rounded border border-gray-200 text-gray-400 text-sm">
-              No orders found yet.
+            <div className="text-center py-16 bg-white rounded-lg border border-gray-200 text-gray-400 text-sm shadow-sm">
+              No orders found yet. Complete a checkout to see your orders here.
             </div>
           ) : (
             orders.map((order) => (
-              <div key={order.id} className="bg-white p-6 rounded border border-gray-200 shadow-sm space-y-4">
-                <div className="flex justify-between text-xs text-gray-500 border-b pb-3">
+              <div key={order.id} className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm space-y-4">
+                <div className="flex flex-wrap justify-between items-center text-xs text-gray-500 border-b pb-3">
                   <span>Order ID: <strong className="text-black">{order.id}</strong></span>
                   <span>Date: {new Date(order.createdAt).toLocaleDateString()}</span>
-                  <span className="px-2 py-0.5 bg-green-50 text-green-700 rounded font-semibold">{order.status}</span>
+                  <span className="px-2.5 py-1 bg-green-50 text-green-700 rounded font-semibold uppercase">{order.status}</span>
                 </div>
+
                 <div className="space-y-3">
                   {order.items.map((item, idx) => (
-                    <div key={idx} className="flex justify-between items-center text-sm">
-                      <div className="flex items-center space-x-3">
-                        <img src={item.imageUrl} alt={item.name} className="w-12 h-12 object-cover rounded bg-gray-100" />
+                    <div key={idx} className="flex items-center justify-between">
+                      <div className="flex items-center space-x-4">
+                        <div className="w-14 h-14 bg-gray-100 rounded overflow-hidden flex-shrink-0">
+                          <SiteImage src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
+                        </div>
                         <div>
                           <p className="text-xs text-gray-400 uppercase">{item.brand}</p>
-                          <p className="font-medium">{item.name} x {item.quantity}</p>
+                          <h4 className="text-sm font-medium text-gray-800">{item.name}</h4>
+                          <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
                         </div>
                       </div>
-                      <span className="font-bold">{formatPrice(item.priceMYR * item.quantity, selectedCurrency)}</span>
+                      <span className="text-sm font-bold text-black">
+                        {formatPrice(item.priceMYR * item.quantity, selectedCurrency)}
+                      </span>
                     </div>
                   ))}
                 </div>
-                <div className="border-t pt-3 flex justify-between font-bold text-sm">
-                  <span>Total Paid:</span>
-                  <span>{formatPrice(order.totalPriceMYR, selectedCurrency)}</span>
+
+                <div className="border-t pt-3 flex justify-between items-center text-sm font-bold">
+                  <span>Total Amount:</span>
+                  <span className="text-base">{formatPrice(order.totalPriceMYR, selectedCurrency)}</span>
                 </div>
               </div>
             ))
@@ -101,3 +118,5 @@ export const AccountPage: React.FC<AccountPageProps> = ({ initialSubTab = 'profi
     </div>
   );
 };
+
+export default AccountPage;
