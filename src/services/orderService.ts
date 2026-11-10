@@ -19,13 +19,13 @@ export interface Order {
 }
 
 export const orderService = {
-  // 从 localStorage 读取真实订单数据
+  // 从 localStorage 统一读取订单列表
   getOrders: (): Order[] => {
     try {
       const data = localStorage.getItem('ccc_orders_list');
       return data ? JSON.parse(data) : [];
     } catch (e) {
-      console.error('Error loading orders:', e);
+      console.error('Error loading orders from localStorage:', e);
       return [];
     }
   },
