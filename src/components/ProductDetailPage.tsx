@@ -14,7 +14,7 @@ interface ProductDetailPageProps {
 
 export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, selectedCurrency, onBack, onGoBag }) => {
   const { addToCart } = useCart();
-  const [activeImgIndex, setActiveImgIndex] = useState(0);
+  const [activeImgIndex, setActiveImgIndex] = useState(0); // 记录当前选中的 P007 缩略图索引
   const [addedCount, setAddedCount] = useState<number>(() => bagStatsService.getStats(product.id));
 
   const handleAddToCart = () => {
@@ -24,7 +24,7 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, s
       name: product.name,
       brand: product.brand,
       priceMYR: product.priceMYR,
-      imageUrl: product.images[0]?.url || '',
+      imageUrl: product.images[activeImgIndex]?.url || product.images[0]?.url || '',
     });
     bagStatsService.recordAddToCart(product.id);
     setAddedCount(bagStatsService.getStats(product.id));
@@ -37,25 +37,34 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, s
       </button>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-        {/* 图片预览区 */}
+        {/* P006 & P007 图片展示区 */}
         <div className="space-y-4">
-          <div className="h-96 md:h-[500px] bg-gray-100 rounded-lg overflow-hidden shadow-sm">
-            <SiteImage src={product.images[activeImgIndex]?.url} alt={product.name} className="w-full h-full object-cover" />
+          {/* P006: 主图（根据 activeImgIndex 动态显示） */}
+          <div className="h-96 md:h-[500px] bg-gray-100 rounded-lg overflow-hidden shadow-sm border border-gray-200">
+            <SiteImage
+              src={product.images[activeImgIndex]?.url || product.images[0]?.url}
+              alt={product.name}
+              className="w-full h-full object-cover transition-all duration-300"
+            />
           </div>
+
+          {/* P007: 缩略图列表（点击切换 P006 显示） */}
           <div className="flex space-x-3 overflow-x-auto pb-2">
             {product.images.map((img, idx) => (
               <button
-                key={img.id}
+                key={img.id || idx}
                 onClick={() => setActiveImgIndex(idx)}
-                className={`w-20 h-20 rounded overflow-hidden border-2 flex-shrink-0 transition-all ${idx === activeImgIndex ? 'border-black' : 'border-transparent opacity-70'}`}
+                className={`w-20 h-20 rounded overflow-hidden border-2 flex-shrink-0 transition-all ${
+                  idx === activeImgIndex ? 'border-black ring-2 ring-black/20 opacity-100' : 'border-transparent opacity-60 hover:opacity-100'
+                }`}
               >
-                <SiteImage src={img.url} alt="Thumbnail" className="w-full h-full object-cover" />
+                <SiteImage src={img.url} alt={`Thumbnail ${idx + 1}`} className="w-full h-full object-cover" />
               </button>
             ))}
           </div>
         </div>
 
-        {/* 商品详情信息区 */}
+        {/* 商品详情面板 */}
         <div className="space-y-6">
           <span className="text-xs font-semibold text-gray-400 uppercase tracking-widest">{product.brand}</span>
           <h1 className="text-3xl font-light text-gray-900">{product.name}</h1>
