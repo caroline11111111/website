@@ -1,18 +1,17 @@
 import React, { useState } from 'react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
-import { orderService } from '../services/orderService';
 import { formatPrice } from '../config/currencies';
 
-interface CheckoutPageProps {
+interface CheckoutProps {
   selectedCurrency: string;
   onOrderComplete: () => void;
 }
 
-export const CheckoutPage: React.FC<CheckoutPageProps> = ({ selectedCurrency, onOrderComplete }) => {
+export const CheckoutPage: React.FC<CheckoutProps> = ({ selectedCurrency, onOrderComplete }) => {
   const { items, clearCart } = useCart();
   const { user } = useAuth();
-  const [address, setAddress] = useState(user?.address || '');
+  const [address, setAddress] = useState(user?.address || 'Malaysia');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const totalPrice = items.reduce((sum, i) => sum + i.priceMYR * i.quantity, 0);
@@ -24,11 +23,10 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ selectedCurrency, on
     setIsSubmitting(true);
 
     try {
-      // 即使未登录也生成一个访客或默认用户的订单ID，确保记录百分百创建成功
-      const currentUserId = user?.id || 'guest_user';
-
-      const newOrder = orderService.createOrder({
-        userId: currentUserId,
+      // 1. 组装新订单数据
+      const newOrder = {
+        id: `ORD-${Date.now().toString().slice(-6)}`,
+        userId: user?.id || 'guest_user',
         items: items.map(item => ({
           id: item.id,
           productId: item.productId,
@@ -37,21 +35,28 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ selectedCurrency, on
           priceMYR: item.priceMYR,
           quantity: item.quantity,
           imageUrl: item.imageUrl,
-          category: 'Handbags'
         })),
         totalPriceMYR: totalPrice,
-        shippingAddress: address || 'Default Address',
-      });
+        shippingAddress: address,
+        status: 'Processing',
+        createdAt: new Date().toISOString(),
+      };
 
-      console.log('Order created successfully:', newOrder);
+      // 2. 强行写入 localStorage 的订单列表（确保 My Order 页面一定能读取到）
+      const existingOrdersRaw = localStorage.getItem('ccc_orders_list');
+      const existingOrders = existingOrdersRaw ? JSON.parse(existingOrdersRaw) : [];
+      const updatedOrders = [newOrder, ...existingOrders];
+      localStorage.setItem('ccc_orders_list', JSON.stringify(updatedOrders));
 
-      // 清空购物车
+      console.log('Order successfully saved to localStorage:', newOrder);
+
+      // 3. 清空购物车
       clearCart();
 
-      // 执行跳转回调（切到 Account > My Order）
+      // 4. 跳转回 Account > My Order
       onOrderComplete();
-    } catch (error) {
-      console.error('Failed to create order:', error);
+    } catch (err) {
+      console.error('Error creating order:', err);
       setIsSubmitting(false);
     }
   };
@@ -67,12 +72,10 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ selectedCurrency, on
             rows={3}
             value={address}
             onChange={(e) => setAddress(e.target.value)}
-            placeholder="Enter your complete delivery address..."
             className="w-full border border-gray-300 rounded p-3 text-sm focus:outline-none focus:border-black"
           />
         </div>
 
-        {/* 订单商品汇总 */}
         <div className="border-t pt-4 space-y-2">
           <div className="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-2">Order Items</div>
           {items.map(item => (
@@ -88,15 +91,17 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ selectedCurrency, on
           <span>{formatPrice(totalPrice, selectedCurrency)}</span>
         </div>
 
-        {/* 核心修改：按钮文字明确为 Create Order */}
+        {/* 强制硬编码文案为 Create Order，绝不显示 Confirm and Pay */}
         <button
           type="submit"
           disabled={isSubmitting || items.length === 0}
-          className="w-full py-4 bg-black text-white text-xs font-semibold uppercase tracking-widest rounded-full hover:bg-gray-800 transition-all shadow-md disabled:opacity-50 cursor-pointer"
+          className="w-full py-4 bg-black text-white text-xs font-semibold uppercase tracking-widest rounded-full hover:bg-gray-800 transition-all shadow-md cursor-pointer"
         >
-          {isSubmitting ? 'Processing...' : 'Create Order'}
+          {isSubmitting ? 'Creating Order...' : 'Create Order'}
         </button>
       </form>
     </div>
   );
 };
+
+export default CheckoutPage;
