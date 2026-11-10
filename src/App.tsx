@@ -107,12 +107,15 @@ const MainApp: React.FC = () => {
               />
             )}
 
-            {currentTab === 'checkout' && (
-              <CheckoutPage
-                selectedCurrency={selectedCurrency}
-                onOrderComplete={() => handleNavigate('account')}
-              />
-            )}
+           {currentTab === 'checkout' && (
+  <CheckoutPage
+    selectedCurrency={selectedCurrency}
+    onOrderComplete={() => {
+      setAccountSubTab('order');
+      setCurrentTab('order');
+    }}
+  />
+)}
 
             {currentTab === 'account' && isAuthenticated && (
               <AccountPage
