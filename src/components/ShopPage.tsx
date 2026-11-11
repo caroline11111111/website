@@ -8,9 +8,9 @@ export const ShopPage:React.FC<ShopPageProps>=({selectedCurrency,onSelectProduct
  const[products,setProducts]=useState<Product[]>([]);const[loading,setLoading]=useState(true);const[error,setError]=useState('');
  const[selectedCategory,setSelectedCategory]=useState('All');const[selectedBrand,setSelectedBrand]=useState('All');const[currentPage,setCurrentPage]=useState(1);const pageSize=12;
  useEffect(()=>{let alive=true;(async()=>{setLoading(true);setError('');
-  const{data,error}=await supabase.from('products').select('id,name,description,price_myr,brands(name),categories(name),product_images(id,storage_path,alt_text,display_order,is_primary)').eq('is_published',true).eq('is_archived',false).order('created_at',{ascending:false});
+  const{data,error}=await supabase.from('products').select('id,name,description,price_myr,condition,color,sku,specifications,brands(name),categories(name),product_images(id,storage_path,alt_text,display_order,is_primary)').eq('is_published',true).eq('is_archived',false).order('created_at',{ascending:false});
   if(!alive)return;if(error){setError(error.message);setProducts([]);}else{
-   const mapped=(data||[]).map((p:any)=>({id:p.id,name:p.name,brand:p.brands?.name||'',category:(p.categories?.name||'Other') as Product['category'],priceMYR:Number(p.price_myr),description:p.description||'',images:(p.product_images||[]).sort((a:any,b:any)=>Number(b.is_primary)-Number(a.is_primary)||a.display_order-b.display_order).map((img:any)=>({id:img.id,url:supabase.storage.from('product-images').getPublicUrl(img.storage_path).data.publicUrl,alt:{en:img.alt_text||p.name,zh:img.alt_text||p.name},order:img.display_order}))}));
+   const mapped=(data||[]).map((p:any)=>({id:p.id,name:p.name,brand:p.brands?.name||'',category:(p.categories?.name||'Other'),condition:p.condition||'',color:p.color||'',sku:p.sku||'',specifications:p.specifications||{},priceMYR:Number(p.price_myr),description:p.description||'',images:(p.product_images||[]).sort((a:any,b:any)=>Number(b.is_primary)-Number(a.is_primary)||a.display_order-b.display_order).map((img:any)=>({id:img.id,url:supabase.storage.from('product-images').getPublicUrl(img.storage_path).data.publicUrl,alt:{en:img.alt_text||p.name,zh:img.alt_text||p.name},order:img.display_order}))}));
    setProducts(mapped);
   }setLoading(false);
  })();return()=>{alive=false;};},[]);
