@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useLanguage } from '../context/LanguageContext';
 
 interface LoginPageProps {
   onLoginSuccess: () => void;
@@ -9,9 +8,6 @@ interface LoginPageProps {
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onNavigateRegister }) => {
   const { login } = useAuth();
-  const { t } = useLanguage();
-  const translations = t as any;
-
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -28,7 +24,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onNavigate
 
   return (
     <div className="max-w-md mx-auto px-6 py-16">
-      <h1 className="text-3xl font-light mb-8 text-center">{translations.loginBtn || 'Log In'}</h1>
+      <h1 className="text-3xl font-light mb-8 text-center">Log In</h1>
       
       {error && (
         <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 text-xs rounded">
@@ -38,7 +34,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onNavigate
 
       <form onSubmit={handleSubmit} className="space-y-4 bg-white p-8 rounded-lg border border-gray-200 shadow-sm">
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">{translations.emailLabel || 'Email Address'}</label>
+          <label className="block text-xs font-medium text-gray-700 mb-1">Email Address</label>
           <input
             type="email"
             required
@@ -49,7 +45,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onNavigate
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">{translations.passwordLabel || 'Password'}</label>
+          <label className="block text-xs font-medium text-gray-700 mb-1">Password</label>
           <input
             type="password"
             required
@@ -63,12 +59,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onNavigate
           type="submit"
           className="w-full py-4 bg-black text-white text-xs font-semibold uppercase tracking-widest rounded-full hover:bg-gray-800 transition-all cursor-pointer shadow-md"
         >
-          {translations.loginBtn || 'Log In'}
+          Log In
         </button>
 
         <div className="text-center pt-4 text-xs text-gray-500 space-y-2">
-          <p>{translations.forgotPasswordNotice || 'Forgot your password?'} <a href="#reset" className="underline">{translations.forgotPasswordLink || 'Reset Password'}</a></p>
-          <p>Don't have an account? <button type="button" onClick={onNavigateRegister} className="text-black underline font-semibold cursor-pointer">{translations.signUpForFreeLink || 'Sign Up'}</button></p>
+          <p>Forgot your password? <a href="#reset" className="underline">Reset Password</a></p>
+          <p>Don't have an account? <button type="button" onClick={onNavigateRegister} className="text-black underline font-semibold cursor-pointer">Sign Up</button></p>
         </div>
       </form>
     </div>
