@@ -1,82 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { orderService, Order } from '../services/orderService';
-import { formatPrice } from '../config/currencies';
-import { SiteImage } from './SiteImage';
-
-interface MyOrderPageProps {
-  selectedCurrency: string;
-}
-
-export const MyOrderPage: React.FC<MyOrderPageProps> = ({ selectedCurrency }) => {
-  const [orders, setOrders] = useState<Order[]>([]);
-
-  const loadOrders = () => {
-    // 从 localStorage 强制读取真实订单，没有任何写死的范例数据
-    const rawData = localStorage.getItem('ccc_orders_list');
-    const parsed: Order[] = rawData ? JSON.parse(rawData) : [];
-    setOrders(parsed);
-  };
-
-  useEffect(() => {
-    loadOrders();
-  }, []);
-
-  return (
-    <div className="w-full max-w-5xl mx-auto px-6 py-12 space-y-8">
-      <div className="flex justify-between items-center border-b pb-6">
-        <h1 className="text-3xl font-light">My Orders</h1>
-        <button 
-          onClick={loadOrders}
-          className="text-xs uppercase tracking-wider text-black underline font-semibold cursor-pointer"
-        >
-          Refresh Orders
-        </button>
-      </div>
-
-      {orders.length === 0 ? (
-        <div className="text-center py-16 bg-white rounded-lg border border-gray-200 text-gray-400 text-sm shadow-sm">
-          No orders found yet. Complete a checkout to see your orders here.
-        </div>
-      ) : (
-        <div className="space-y-6">
-          {orders.map((order) => (
-            <div key={order.id} className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm space-y-4">
-              <div className="flex flex-wrap justify-between items-center text-xs text-gray-500 border-b pb-3">
-                <span>Order ID: <strong className="text-black">{order.id}</strong></span>
-                <span>Date: {new Date(order.createdAt).toLocaleDateString()}</span>
-                <span className="px-2.5 py-1 bg-green-50 text-green-700 rounded font-semibold uppercase">{order.status}</span>
-              </div>
-
-              <div className="space-y-3">
-                {order.items.map((item, idx) => (
-                  <div key={idx} className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <div className="w-14 h-14 bg-gray-100 rounded overflow-hidden flex-shrink-0">
-                        <SiteImage src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-400 uppercase">{item.brand}</p>
-                        <h4 className="text-sm font-medium text-gray-800">{item.name}</h4>
-                        <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
-                      </div>
-                    </div>
-                    <span className="text-sm font-bold text-black">
-                      {formatPrice(item.priceMYR * item.quantity, selectedCurrency)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="border-t pt-3 flex justify-between items-center text-sm font-bold">
-                <span>Total Amount:</span>
-                <span className="text-base">{formatPrice(order.totalPriceMYR, selectedCurrency)}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+import React,{useCallback,useEffect,useState} from 'react';
+import {formatPrice} from '../config/currencies';
+import {supabase} from '../lib/supabase';
+import {useAuth} from '../context/AuthContext';
+type OrderRow={id:string;order_number:string;order_status:string;payment_status:string;subtotal_myr:number;shipping_fee_myr:number;total_myr:number;created_at:string;order_items:Array<{id:string;product_name:string;brand_name:string|null;product_image:string|null;unit_price_myr:number;quantity:number;line_total_myr:number}>};
+export const MyOrderPage:React.FC<{selectedCurrency:string}>=({selectedCurrency})=>{
+ const{user}=useAuth();const[orders,setOrders]=useState<OrderRow[]>([]);const[loading,setLoading]=useState(true);const[error,setError]=useState('');
+ const load=useCallback(async()=>{if(!user){setOrders([]);setLoading(false);return;}setLoading(true);const{data,error}=await supabase.from('orders').select('id,order_number,order_status,payment_status,subtotal_myr,shipping_fee_myr,total_myr,created_at,order_items(id,product_name,brand_name,product_image,unit_price_myr,quantity,line_total_myr)').order('created_at',{ascending:false});if(error)setError(error.message);else setOrders((data||[]) as OrderRow[]);setLoading(false);},[user]);
+ useEffect(()=>{void load();},[load]);
+ const confirm=async(id:string)=>{const{error}=await supabase.rpc('confirm_order_received',{p_order_id:id});if(error)setError(error.message);else await load();};
+ if(!user)return <div className="py-16 text-center">Please sign in to view your orders.</div>;
+ return <div className="w-full max-w-5xl mx-auto px-6 py-12 space-y-8"><div className="flex justify-between items-center border-b pb-6"><h1 className="text-3xl font-light">My Orders</h1><button onClick={()=>void load()} className="text-xs underline">Refresh</button></div>{error&&<p role="alert" className="text-sm text-red-600">{error}</p>}{loading?<p className="py-16 text-center">Loading orders…</p>:orders.length===0?<div className="text-center py-16 bg-white rounded-lg border text-gray-400 text-sm">No orders yet.</div>:<div className="space-y-6">{orders.map(o=><article key={o.id} className="bg-white p-6 rounded-lg border shadow-sm space-y-4"><div className="flex flex-wrap justify-between gap-3 text-xs text-gray-500 border-b pb-3"><span>Order: <strong className="text-black">{o.order_number}</strong></span><span>{new Date(o.created_at).toLocaleDateString()}</span><span className="uppercase font-semibold">{o.order_status.replace('_',' ')} · Payment {o.payment_status.replace('_',' ')}</span></div><div className="space-y-3">{o.order_items.map(i=><div key={i.id} className="flex justify-between gap-4 text-sm"><div><p className="font-medium">{i.product_name}</p><p className="text-xs text-gray-500">{i.brand_name||''} · Qty {i.quantity}</p></div><span>{formatPrice(Number(i.line_total_myr),selectedCurrency)}</span></div>)}</div><div className="border-t pt-3 text-sm space-y-1"><div className="flex justify-between"><span>Subtotal</span><span>{formatPrice(Number(o.subtotal_myr),selectedCurrency)}</span></div><div className="flex justify-between"><span>Shipping</span><span>{formatPrice(Number(o.shipping_fee_myr),selectedCurrency)}</span></div><div className="flex justify-between font-bold text-base"><span>Total</span><span>{formatPrice(Number(o.total_myr),selectedCurrency)}</span></div></div>{o.order_status==='shipped'&&<button onClick={()=>void confirm(o.id)} className="px-5 py-3 bg-black text-white text-xs rounded-full">Confirm Order Received</button>}</article>)}</div>}</div>;
 };
-
 export default MyOrderPage;
