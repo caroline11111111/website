@@ -4,7 +4,11 @@ export interface Product {
   id: string;
   name: string;
   brand: string;
-  category: 'Handbags' | 'Watches';
+  category: string;
+  condition?: string;
+  color?: string;
+  sku?: string;
+  specifications?: Record<string, unknown>;
   priceMYR: number;
   description: string;
   images: SiteImageItem[];
