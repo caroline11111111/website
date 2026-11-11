@@ -1,3 +1,4 @@
+// Separate storefront build output for the Cloudflare Pages preview deployment.
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
