@@ -18,19 +18,21 @@ export interface Order {
   createdAt: string;
 }
 
+const STORAGE_KEY = 'ccc_orders_list';
+
 export const orderService = {
-  // 从 localStorage 统一读取订单列表
+  // 获取所有订单
   getOrders: (): Order[] => {
     try {
-      const data = localStorage.getItem('ccc_orders_list');
+      const data = localStorage.getItem(STORAGE_KEY);
       return data ? JSON.parse(data) : [];
     } catch (e) {
-      console.error('Error loading orders from localStorage:', e);
+      console.error('Failed to parse orders from localStorage:', e);
       return [];
     }
   },
 
-  // 创建订单并写入 localStorage
+  // 创建并持久化新订单
   createOrder: (orderData: Omit<Order, 'id' | 'status' | 'createdAt'>): Order => {
     const newOrder: Order = {
       ...orderData,
@@ -38,9 +40,14 @@ export const orderService = {
       status: 'Processing',
       createdAt: new Date().toISOString(),
     };
-    const existing = orderService.getOrders();
-    const updated = [newOrder, ...existing];
-    localStorage.setItem('ccc_orders_list', JSON.stringify(updated));
+    
+    const existingOrders = orderService.getOrders();
+    const updatedOrders = [newOrder, ...existingOrders];
+    
+    // 强制写入 localStorage
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedOrders));
+    console.log('Order successfully saved to localStorage:', newOrder);
+    
     return newOrder;
   }
 };
