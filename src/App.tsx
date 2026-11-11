@@ -14,7 +14,7 @@ import {MyOrderPage} from './components/MyOrderPage';
 import {LoginPage} from './components/LoginPage';
 import {RegisterPage} from './components/RegisterPage';
 export function App(){
- const[currentTab,setCurrentTab]=useState('home');const[selectedCurrency,setSelectedCurrency]=useState('MYR');const[selectedProduct,setSelectedProduct]=useState<Product|null>(null);const[accountSubTab,setAccountSubTab]=useState('profile');
+ const[currentTab,setCurrentTab]=useState('home');const[selectedCurrency,setSelectedCurrency]=useState('MYR');const[selectedProduct,setSelectedProduct]=useState<Product|null>(null);const[accountSubTab,setAccountSubTab]=useState('profile');const[selectedCartItemIds,setSelectedCartItemIds]=useState<string[]>([]);
  const{items}=useCart();const{user,loading}=useAuth();const totalCartCount=items.reduce((sum,i)=>sum+i.quantity,0);
  const handleSelectProduct=(product:Product)=>{setSelectedProduct(product);setCurrentTab('productDetail');window.scrollTo({top:0,behavior:'smooth'});};
  if(loading)return <div className="min-h-screen grid place-items-center">Loading…</div>;
@@ -23,9 +23,9 @@ export function App(){
  <main className="flex-grow">
  {currentTab==='home'&&<div className="space-y-12 pb-16"><Banner/><div className="text-center"><h2 className="text-2xl font-light">FEATURED HIGHLIGHTS</h2></div><Slideshow/><div className="text-center"><button onClick={()=>setCurrentTab('shop')} className="px-8 py-3 bg-black text-white rounded-full">Explore Shop</button></div></div>}
  {currentTab==='shop'&&<ShopPage selectedCurrency={selectedCurrency} onSelectProduct={handleSelectProduct}/>}
- {currentTab==='productDetail'&&selectedProduct&&<ProductDetailPage product={selectedProduct} selectedCurrency={selectedCurrency} onBack={()=>setCurrentTab('shop')} onGoBag={()=>setCurrentTab(user?'bag':'login')}/>}
- {currentTab==='bag'&&<BagPage selectedCurrency={selectedCurrency} onGoShop={()=>setCurrentTab('shop')} onGoCheckout={()=>setCurrentTab(user?'checkout':'login')}/>}
- {currentTab==='checkout'&&<CheckoutPage selectedCurrency={selectedCurrency} onOrderComplete={()=>setCurrentTab('myOrder')}/>}
+ {currentTab==='productDetail'&&selectedProduct&&<ProductDetailPage product={selectedProduct} selectedCurrency={selectedCurrency} onBack={()=>setCurrentTab('shop')} onGoBag={()=>setCurrentTab(user?'bag':'login')} onLogin={()=>setCurrentTab('login')}/>}
+ {currentTab==='bag'&&<BagPage selectedCurrency={selectedCurrency} onGoShop={()=>setCurrentTab('shop')} onGoCheckout={(ids)=>{setSelectedCartItemIds(ids);setCurrentTab(user?'checkout':'login');}}/>}
+ {currentTab==='checkout'&&<CheckoutPage selectedCurrency={selectedCurrency} selectedItemIds={selectedCartItemIds} onOrderComplete={()=>setCurrentTab('myOrder')}/>}
  {currentTab==='account'&&<AccountPage initialSubTab={accountSubTab} selectedCurrency={selectedCurrency}/>}
  {currentTab==='myOrder'&&<MyOrderPage selectedCurrency={selectedCurrency}/>}
  {currentTab==='login'&&<LoginPage onLoginSuccess={()=>setCurrentTab('account')} onNavigateRegister={()=>setCurrentTab('signup')}/>}
