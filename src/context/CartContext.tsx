@@ -2,7 +2,7 @@ import React,{createContext,useCallback,useContext,useEffect,useMemo,useState} f
 import {useAuth} from './AuthContext';
 import {supabase} from '../lib/supabase';
 export interface CartItem{id:string;productId:string;variantId?:string|null;name:string;brand:string;priceMYR:number;imageUrl:string;quantity:number;}
-interface CartContextType{items:CartItem[];addToCart:(item:Omit<CartItem,'quantity'>)=>Promise<void>;removeFromCart:(id:string)=>Promise<void>;clearCart:()=>Promise<void>;totalItemsCount:number;loading:boolean;}
+interface CartContextType{items:CartItem[];addToCart:(item:Omit<CartItem,'quantity'>)=>Promise<void>;removeFromCart:(id:string)=>Promise<void>;clearCart:()=>Promise<void>;totalItemsCount:number;loading:boolean;refresh:()=>Promise<void>;}
 const CartContext=createContext<CartContextType|undefined>(undefined);
 export const CartProvider:React.FC<{children:React.ReactNode}>=({children})=>{
  const{user}=useAuth();const[items,setItems]=useState<CartItem[]>([]);const[cartId,setCartId]=useState<string|null>(null);const[loading,setLoading]=useState(false);
@@ -40,6 +40,6 @@ export const CartProvider:React.FC<{children:React.ReactNode}>=({children})=>{
  const removeFromCart=async(id:string)=>{const{error}=await supabase.from('cart_items').delete().eq('id',id);if(error)throw error;await refresh();};
  const clearCart=async()=>{if(!cartId)return;const{error}=await supabase.from('cart_items').delete().eq('cart_id',cartId);if(error)throw error;await refresh();};
  const totalItemsCount=useMemo(()=>items.reduce((sum,item)=>sum+item.quantity,0),[items]);
- return <CartContext.Provider value={{items,addToCart,removeFromCart,clearCart,totalItemsCount,loading}}>{children}</CartContext.Provider>;
+ return <CartContext.Provider value={{items,addToCart,removeFromCart,clearCart,totalItemsCount,loading,refresh}}>{children}</CartContext.Provider>;
 };
 export const useCart=()=>{const context=useContext(CartContext);if(!context)throw new Error('useCart must be used within a CartProvider');return context;};
