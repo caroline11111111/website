@@ -30,7 +30,7 @@ export function App(){
  {currentTab==='productDetail'&&selectedProduct&&<ProductDetailPage product={selectedProduct} selectedCurrency={selectedCurrency} onBack={()=>setCurrentTab('shop')} onGoBag={()=>user?setCurrentTab('bag'):openLogin('bag')} onLogin={()=>openLogin('productDetail')}/>}
  {currentTab==='bag'&&<BagPage selectedCurrency={selectedCurrency} onGoShop={()=>setCurrentTab('shop')} onGoCheckout={(ids)=>{setSelectedCartItemIds(ids);user?setCurrentTab('checkout'):openLogin('checkout');}}/>}
  {currentTab==='checkout'&&<CheckoutPage selectedCurrency={selectedCurrency} selectedItemIds={selectedCartItemIds} onOrderComplete={()=>setCurrentTab('myOrder')}/>}
- {currentTab==='account'&&<AccountPage initialSubTab={accountSubTab} selectedCurrency={selectedCurrency}/>}
+ {currentTab==='account'&&<AccountPage initialSubTab={accountSubTab} selectedCurrency={selectedCurrency} onGoOrders={()=>setCurrentTab('myOrder')}/>}
  {currentTab==='myOrder'&&<MyOrderPage selectedCurrency={selectedCurrency}/>}
  {currentTab==='login'&&<LoginPage onLoginSuccess={()=>setCurrentTab(loginReturnTab)} onNavigateRegister={()=>setCurrentTab('signup')}/>}
  {currentTab==='signup'&&<RegisterPage onRegisterSuccess={()=>setCurrentTab(loginReturnTab)} onNavigateLogin={()=>setCurrentTab('login')}/>}
