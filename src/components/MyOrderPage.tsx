@@ -10,15 +10,28 @@ interface MyOrderPageProps {
 export const MyOrderPage: React.FC<MyOrderPageProps> = ({ selectedCurrency }) => {
   const [orders, setOrders] = useState<Order[]>([]);
 
+  const loadOrders = () => {
+    // 从 localStorage 强制读取真实订单，没有任何写死的范例数据
+    const rawData = localStorage.getItem('ccc_orders_list');
+    const parsed: Order[] = rawData ? JSON.parse(rawData) : [];
+    setOrders(parsed);
+  };
+
   useEffect(() => {
-    // 每次渲染或切换到该页面时，实时加载本地订单
-    const fetchedOrders = orderService.getOrders();
-    setOrders(fetchedOrders);
+    loadOrders();
   }, []);
 
   return (
     <div className="w-full max-w-5xl mx-auto px-6 py-12 space-y-8">
-      <h1 className="text-3xl font-light border-b pb-6">My Orders</h1>
+      <div className="flex justify-between items-center border-b pb-6">
+        <h1 className="text-3xl font-light">My Orders</h1>
+        <button 
+          onClick={loadOrders}
+          className="text-xs uppercase tracking-wider text-black underline font-semibold cursor-pointer"
+        >
+          Refresh Orders
+        </button>
+      </div>
 
       {orders.length === 0 ? (
         <div className="text-center py-16 bg-white rounded-lg border border-gray-200 text-gray-400 text-sm shadow-sm">
