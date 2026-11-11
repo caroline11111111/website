@@ -6,12 +6,40 @@ import {supabase} from '../lib/supabase';
 interface CheckoutPageProps{selectedCurrency:string;selectedItemIds:string[];onOrderComplete:()=>void;}
 const MALAYSIA_REGIONS=[{code:'JHR',name:'Johor'},{code:'KDH',name:'Kedah'},{code:'KTN',name:'Kelantan'},{code:'MLK',name:'Melaka'},{code:'NSN',name:'Negeri Sembilan'},{code:'PHG',name:'Pahang'},{code:'PNG',name:'Penang'},{code:'PRK',name:'Perak'},{code:'PLS',name:'Perlis'},{code:'SGR',name:'Selangor'},{code:'TRG',name:'Terengganu'},{code:'KUL',name:'Kuala Lumpur'},{code:'LBN',name:'Labuan'},{code:'PJY',name:'Putrajaya'},{code:'SBH',name:'Sabah'},{code:'SWK',name:'Sarawak'}];
 const normalizeMalaysiaRegion=(value:string)=>{const v=(value||'').trim().toLowerCase();const found=MALAYSIA_REGIONS.find(x=>x.code.toLowerCase()===v||x.name.toLowerCase()===v||(x.name==='Penang'&&v==='pulau pinang'));return found?.code||value;};
+const getCheckoutErrorMessage=(err:unknown):string=>{
+ if(typeof err==='string')return err;
+ if(err&&typeof err==='object'){
+  const value=err as {message?:unknown;details?:unknown;hint?:unknown;code?:unknown};
+  const message=typeof value.message==='string'?value.message:'';
+  const details=typeof value.details==='string'?value.details:'';
+  const hint=typeof value.hint==='string'?value.hint:'';
+  const code=typeof value.code==='string'?value.code:'';
+  return [message,details,hint,code?(`Reference: ${code}`):''].filter(Boolean).join(' — ')||'An unexpected error occurred.';
+ }
+ return 'An unexpected error occurred.';
+};
+const explainCheckoutError=(message:string,proofUploaded:boolean):string=>{
+ const lower=message.toLowerCase();
+ let explanation=message;
+ if(lower.includes('insufficient stock'))explanation=`Insufficient stock. ${message.replace(/insufficient stock for product/i,'').trim()} Please reduce the quantity or contact support to confirm availability.`;
+ else if(lower.includes('shipping is not available'))explanation='Shipping is not available for this address. Please check your country and state / region, or contact support.';
+ else if(lower.includes('shipping rate is missing')||lower.includes('shipping rate changed'))explanation='A valid shipping rate is not configured for this destination and package weight. Please contact support before trying again.';
+ else if(lower.includes('price or shipping changed'))explanation='The product price or shipping fee has changed. Please review the updated checkout total and confirm again.';
+ else if(lower.includes('payment proof'))explanation=`Payment proof issue: ${message}`;
+ else if(lower.includes('selected cart')||lower.includes('cart items'))explanation='Your selected cart items have changed. Please return to your bag, refresh it, and review the items.';
+ else if(lower.includes('authentication required'))explanation='Your session has expired. Please sign in again before submitting your order.';
+ return proofUploaded
+  ? `Order was not created. ${explanation} Your payment receipt has already uploaded successfully and is being retained; do not upload it again. Correct the issue and retry, or contact support if you are unsure.`
+  : `Order was not created. ${explanation}`;
+};
 export const CheckoutPage:React.FC<CheckoutPageProps>=({selectedCurrency,selectedItemIds,onOrderComplete})=>{
  const{user}=useAuth();const{items,refresh}=useCart();
  const[recipientName,setRecipientName]=useState(user?.name||'');const[phone,setPhone]=useState(user?.phone||'');
  const[line1,setLine1]=useState('');const[line2,setLine2]=useState('');const[city,setCity]=useState('');
  const[region,setRegion]=useState('');const[postal,setPostal]=useState('');const[country,setCountry]=useState('MY');
  const[file,setFile]=useState<File|null>(null);const[busy,setBusy]=useState(false);const[error,setError]=useState('');
+ const[uploadedProofPath,setUploadedProofPath]=useState<string|null>(null);
+ const[idempotencyKey,setIdempotencyKey]=useState<string|null>(null);
  const[quote,setQuote]=useState<any>(null);const[quoteError,setQuoteError]=useState('');
  const selected=useMemo(()=>items.filter(i=>selectedItemIds.includes(i.id)),[items,selectedItemIds]);
  const subtotal=selected.reduce((sum,i)=>sum+i.priceMYR*i.quantity,0);
@@ -20,28 +48,38 @@ export const CheckoutPage:React.FC<CheckoutPageProps>=({selectedCurrency,selecte
   return()=>{alive=false;};
  },[user,selectedItemIds.join(','),country,region]);
  useEffect(()=>{if(!user)return;supabase.from('customer_addresses').select('*').eq('user_id',user.id).eq('is_default',true).maybeSingle().then(({data})=>{if(data){setRecipientName(data.recipient_name);setPhone(data.phone);setLine1(data.address_line_1);setLine2(data.address_line_2||'');setCity(data.city);setRegion((data.country_code||'').toUpperCase()==='MY'?normalizeMalaysiaRegion(data.state_region||''):(data.state_region||''));setPostal(data.postal_code||'');setCountry(data.country_code);}});},[user]);
- const submit=async(e:React.FormEvent)=>{e.preventDefault();setError('');
+ const submit=async(e:React.FormEvent)=>{
+  e.preventDefault();setError('');
   if(!user){setError('Please sign in before checkout.');return;}if(!selected.length){setError('Please return to your bag and select items.');return;}
   if(!quote){setError(quoteError||'Please wait for a valid shipping quote before submitting.');return;}
   if(!file){setError('Please upload your payment proof before placing the order.');return;}
   if(file.size>5242880){setError('Payment proof must not exceed 5MB.');return;}
   if(!['image/jpeg','image/png','application/pdf'].includes(file.type)){setError('Only JPG, PNG, or PDF files are accepted.');return;}
   setBusy(true);
+  let proofPathForAttempt=uploadedProofPath;
   try{
-   const ext=file.type==='image/jpeg'?'jpg':file.type==='image/png'?'png':'pdf';const path=user.id+'/'+crypto.randomUUID()+'.'+ext;
-   const{error:uploadError}=await supabase.storage.from('payment-proofs').upload(path,file,{contentType:file.type,upsert:false});
-   if(uploadError)throw uploadError;
+   if(!proofPathForAttempt){
+    const ext=file.type==='image/jpeg'?'jpg':file.type==='image/png'?'png':'pdf';
+    proofPathForAttempt=user.id+'/'+crypto.randomUUID()+'.'+ext;
+    const{error:uploadError}=await supabase.storage.from('payment-proofs').upload(proofPathForAttempt,file,{contentType:file.type,upsert:false});
+    if(uploadError)throw uploadError;
+    setUploadedProofPath(proofPathForAttempt);
+   }
+   const requestKey=idempotencyKey||crypto.randomUUID();
+   if(!idempotencyKey)setIdempotencyKey(requestKey);
    const{error:submitError}=await supabase.rpc('submit_order_confirmed',{
     p_cart_item_ids:selectedItemIds,p_recipient_name:recipientName,p_recipient_phone:phone,
     p_shipping_address:{address_line_1:line1,address_line_2:line2,city,region_code:region,postal_code:postal,country_code:country},
-    p_payment_proof_path:path,p_original_filename:file.name,p_mime_type:file.type,p_file_size:file.size,
+    p_payment_proof_path:proofPathForAttempt,p_original_filename:file.name,p_mime_type:file.type,p_file_size:file.size,
     p_expected_subtotal_myr:Number(quote.subtotal_myr),p_expected_shipping_fee_myr:Number(quote.shipping_fee_myr),
-    p_idempotency_key:crypto.randomUUID()
+    p_idempotency_key:requestKey
    });
    if(submitError)throw submitError;
    await refresh();onOrderComplete();
-  }catch(err){setError(err instanceof Error?err.message:'Unable to submit your order. If the proof uploaded but submission failed, contact support before retrying.');}
-  finally{setBusy(false);}
+  }catch(err){
+   const message=getCheckoutErrorMessage(err);
+   setError(explainCheckoutError(message,Boolean(proofPathForAttempt)));
+  }finally{setBusy(false);}
  };
  if(!user)return <div className="max-w-2xl mx-auto px-6 py-16 text-center">Please sign in to continue checkout.</div>;
  return <div className="w-full max-w-3xl mx-auto px-6 py-12"><h1 className="text-3xl font-light mb-8">Checkout</h1><form onSubmit={submit} className="space-y-6 bg-white p-8 rounded-lg border shadow-sm">
@@ -59,7 +97,7 @@ export const CheckoutPage:React.FC<CheckoutPageProps>=({selectedCurrency,selecte
     <label className="block text-sm">Country Code<input required maxLength={2} value={country} onChange={e=>setCountry(e.target.value.toUpperCase())} className="mt-1 w-full border rounded p-3"/></label>
    </div>
   </section>
-  <section className="space-y-3 border-t pt-5"><h2 className="font-semibold">Payment Proof</h2><p className="text-xs text-gray-500">Upload your payment receipt (JPG, PNG, or PDF; maximum 5MB). Uploading a receipt does not confirm payment. Our team will review it manually.</p><input type="file" required accept="image/jpeg,image/png,application/pdf" onChange={e=>setFile(e.target.files?.[0]||null)} className="block w-full text-sm"/></section>
+  <section className="space-y-3 border-t pt-5"><h2 className="font-semibold">Payment Proof</h2><p className="text-xs text-gray-500">Upload your payment receipt (JPG, PNG, or PDF; maximum 5MB). Uploading a receipt does not confirm payment. Our team will review it manually.</p><input type="file" required accept="image/jpeg,image/png,application/pdf" onChange={e=>{setFile(e.target.files?.[0]||null);setUploadedProofPath(null);setIdempotencyKey(null);setError('');}} className="block w-full text-sm"/>{uploadedProofPath&&<p className="text-xs text-green-700">Payment receipt uploaded and retained for this checkout attempt. It will not be uploaded again when you retry.</p>}</section>
   <section className="border-t pt-5 space-y-3"><h2 className="font-semibold">Selected Items</h2>
    {selected.map(i=><div key={i.id} className="flex justify-between text-sm"><span>{i.name} × {i.quantity}</span><span>{formatPrice(i.priceMYR*i.quantity,selectedCurrency)}</span></div>)}
    <div className="border-t pt-3 flex justify-between font-semibold"><span>Subtotal</span><span>{quote?formatPrice(Number(quote.subtotal_myr),selectedCurrency):formatPrice(subtotal,selectedCurrency)}</span></div>
