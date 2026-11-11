@@ -11,7 +11,7 @@ export const MyOrderPage: React.FC<MyOrderPageProps> = ({ selectedCurrency }) =>
   const [orders, setOrders] = useState<Order[]>([]);
 
   useEffect(() => {
-    // 组件加载时自动读取最新订单
+    // 每次渲染或切换到该页面时，实时加载本地订单
     const fetchedOrders = orderService.getOrders();
     setOrders(fetchedOrders);
   }, []);
