@@ -8,7 +8,7 @@ interface FooterProps {
 }
 
 export const Footer: React.FC<FooterProps> = ({ selectedCurrency, onCurrencyChange }) => {
-  const { lang, setLang } = useLanguage();
+  const { language: lang, setLanguage: setLang } = useLanguage();
 
   return (
     <footer className="w-full bg-gray-100 text-gray-700 py-8 px-6 mt-auto border-t border-gray-200 text-sm">
