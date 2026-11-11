@@ -1,3 +1,4 @@
+# CI build check for Vite + TypeScript
 name: Build and Type Check
 on:
   push:
