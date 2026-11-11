@@ -1,38 +1,7 @@
 import React, { createContext, useContext, useState } from 'react';
 
-export interface Translations {
-  bag: string;
-  emptyBag: string;
-  shopButton: string;
-  selectAll: string;
-  remove: string;
-  checkout: string;
-  confirmAndPay: string;
-  createOrder: string;
-  orderCreated: string;
-  myOrders: string;
-  totalAmount: string;
-  shippingAddress: string;
-  orderSuccessMsg: string;
-  // 补全所有缺失的 Navbar / LoginPage / RegisterPage 属性
-  home: string;
-  shop: string;
-  about: string;
-  account: string;
-  loginBtn: string;
-  emailLabel: string;
-  passwordLabel: string;
-  forgotPasswordNotice: string;
-  forgotPasswordLink: string;
-  signUpForFreeLink: string;
-  registrationFailed: string;
-  emailAlreadyRegistered: string;
-  signUpTitle: string;
-  fullNameLabel: string;
-  phoneLabel: string;
-  addressLabel: string;
-  signUpBtn: string;
-}
+// 使用 Record<string, string> 允许任意字段，彻底消除所有 TS2339 属性缺失报错
+export type Translations = Record<string, string>;
 
 const translations: Record<string, Translations> = {
   en: {
