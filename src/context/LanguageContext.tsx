@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState } from 'react';
 
-// 1. 补全所有组件用到的翻译接口定义
 export interface Translations {
   bag: string;
   emptyBag: string;
@@ -15,7 +14,7 @@ export interface Translations {
   totalAmount: string;
   shippingAddress: string;
   orderSuccessMsg: string;
-  // 以下是修复报错新增的字段
+  // 补全所有缺失的 Navbar / LoginPage / RegisterPage 属性
   home: string;
   shop: string;
   about: string;
