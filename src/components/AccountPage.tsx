@@ -4,7 +4,7 @@ import {supabase} from '../lib/supabase';
 import {useTheme,themeToCssVars} from '../context/ThemeContext';
 interface AccountPageProps{initialSubTab?:string;selectedCurrency:string;}
 export const AccountPage:React.FC<AccountPageProps>=({initialSubTab='profile'})=>{
- const{user,logout}=useAuth();const{name,setName}=useState(user?.name||'');const[phone,setPhone]=useState(user?.phone||'');const[busy,setBusy]=useState(false);const[message,setMessage]=useState('');
+ const{user,logout}=useAuth();const[name,setName]=useState(user?.name||'');const[phone,setPhone]=useState(user?.phone||'');const[busy,setBusy]=useState(false);const[message,setMessage]=useState('');
  const{currentTheme}=useTheme();
  useEffect(()=>{if(!user)return;supabase.from('profiles').select('display_name,phone,whatsapp').eq('id',user.id).maybeSingle().then(({data})=>{if(data){setName(data.display_name||user.name);setPhone(data.phone||data.whatsapp||user.phone||'');}});},[user]);
  const save=async(e:React.FormEvent)=>{e.preventDefault();if(!user)return;setBusy(true);setMessage('');const{error}=await supabase.from('profiles').update({display_name:name,phone,whatsapp:phone}).eq('id',user.id);setMessage(error?error.message:'Profile updated.');setBusy(false);};
