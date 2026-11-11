@@ -4,6 +4,8 @@ import {useCart} from '../context/CartContext';
 import {formatPrice} from '../config/currencies';
 import {supabase} from '../lib/supabase';
 interface CheckoutPageProps{selectedCurrency:string;selectedItemIds:string[];onOrderComplete:()=>void;}
+const MALAYSIA_REGIONS=[{code:'JHR',name:'Johor'},{code:'KDH',name:'Kedah'},{code:'KTN',name:'Kelantan'},{code:'MLK',name:'Melaka'},{code:'NSN',name:'Negeri Sembilan'},{code:'PHG',name:'Pahang'},{code:'PNG',name:'Penang'},{code:'PRK',name:'Perak'},{code:'PLS',name:'Perlis'},{code:'SGR',name:'Selangor'},{code:'TRG',name:'Terengganu'},{code:'KUL',name:'Kuala Lumpur'},{code:'LBN',name:'Labuan'},{code:'PJY',name:'Putrajaya'},{code:'SBH',name:'Sabah'},{code:'SWK',name:'Sarawak'}];
+const normalizeMalaysiaRegion=(value:string)=>{const v=(value||'').trim().toLowerCase();const found=MALAYSIA_REGIONS.find(x=>x.code.toLowerCase()===v||x.name.toLowerCase()===v||(x.name==='Penang'&&v==='pulau pinang'));return found?.code||value;};
 export const CheckoutPage:React.FC<CheckoutPageProps>=({selectedCurrency,selectedItemIds,onOrderComplete})=>{
  const{user}=useAuth();const{items,refresh}=useCart();
  const[recipientName,setRecipientName]=useState(user?.name||'');const[phone,setPhone]=useState(user?.phone||'');
@@ -17,7 +19,7 @@ export const CheckoutPage:React.FC<CheckoutPageProps>=({selectedCurrency,selecte
   supabase.rpc('quote_shipping',{p_cart_item_ids:selectedItemIds,p_country_code:country,p_region_code:region||null}).then(({data,error})=>{if(!alive)return;if(error){setQuote(null);setQuoteError(error.message);}else{setQuote(data);setQuoteError('');}});
   return()=>{alive=false;};
  },[user,selectedItemIds.join(','),country,region]);
- useEffect(()=>{if(!user)return;supabase.from('customer_addresses').select('*').eq('user_id',user.id).eq('is_default',true).maybeSingle().then(({data})=>{if(data){setRecipientName(data.recipient_name);setPhone(data.phone);setLine1(data.address_line_1);setLine2(data.address_line_2||'');setCity(data.city);setRegion(data.state_region||'');setPostal(data.postal_code||'');setCountry(data.country_code);}});},[user]);
+ useEffect(()=>{if(!user)return;supabase.from('customer_addresses').select('*').eq('user_id',user.id).eq('is_default',true).maybeSingle().then(({data})=>{if(data){setRecipientName(data.recipient_name);setPhone(data.phone);setLine1(data.address_line_1);setLine2(data.address_line_2||'');setCity(data.city);setRegion(country==='MY'?normalizeMalaysiaRegion(data.state_region||''):(data.state_region||''));setPostal(data.postal_code||'');setCountry(data.country_code);}});},[user]);
  const submit=async(e:React.FormEvent)=>{e.preventDefault();setError('');
   if(!user){setError('Please sign in before checkout.');return;}if(!selected.length){setError('Please return to your bag and select items.');return;}
   if(!quote){setError(quoteError||'Please wait for a valid shipping quote before submitting.');return;}
@@ -52,7 +54,7 @@ export const CheckoutPage:React.FC<CheckoutPageProps>=({selectedCurrency,selecte
    <label className="block text-sm">Address Line 2<input value={line2} onChange={e=>setLine2(e.target.value)} className="mt-1 w-full border rounded p-3"/></label>
    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
     <label className="block text-sm">City<input required value={city} onChange={e=>setCity(e.target.value)} className="mt-1 w-full border rounded p-3"/></label>
-    <label className="block text-sm">State / Region<input value={region} onChange={e=>setRegion(e.target.value)} className="mt-1 w-full border rounded p-3"/></label>
+    <label className="block text-sm">State / Region{country.trim().toUpperCase()==='MY'?<select required value={region} onChange={e=>setRegion(e.target.value)} className="mt-1 w-full border rounded p-3"><option value="">Select state / region</option>{MALAYSIA_REGIONS.map(x=><option key={x.code} value={x.code}>{x.name}</option>)}</select>:<input value={region} onChange={e=>setRegion(e.target.value)} placeholder="Enter state / region" className="mt-1 w-full border rounded p-3"/>}</label>
     <label className="block text-sm">Postal Code<input value={postal} onChange={e=>setPostal(e.target.value)} className="mt-1 w-full border rounded p-3"/></label>
     <label className="block text-sm">Country Code<input required maxLength={2} value={country} onChange={e=>setCountry(e.target.value.toUpperCase())} className="mt-1 w-full border rounded p-3"/></label>
    </div>
