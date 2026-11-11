@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState } from 'react';
 
-// 1. 定义语言配置接口与字典
+// 1. 补全所有组件用到的翻译接口定义
 export interface Translations {
   bag: string;
   emptyBag: string;
@@ -15,6 +15,24 @@ export interface Translations {
   totalAmount: string;
   shippingAddress: string;
   orderSuccessMsg: string;
+  // 以下是修复报错新增的字段
+  home: string;
+  shop: string;
+  about: string;
+  account: string;
+  loginBtn: string;
+  emailLabel: string;
+  passwordLabel: string;
+  forgotPasswordNotice: string;
+  forgotPasswordLink: string;
+  signUpForFreeLink: string;
+  registrationFailed: string;
+  emailAlreadyRegistered: string;
+  signUpTitle: string;
+  fullNameLabel: string;
+  phoneLabel: string;
+  addressLabel: string;
+  signUpBtn: string;
 }
 
 const translations: Record<string, Translations> = {
@@ -25,13 +43,30 @@ const translations: Record<string, Translations> = {
     selectAll: 'Select All',
     remove: 'Remove',
     checkout: 'Proceed to Checkout',
-    confirmAndPay: 'Create Order', // 👈 核心修改：强制替换 Confirm and Pay 属性
+    confirmAndPay: 'Create Order',
     createOrder: 'Create Order',
     orderCreated: 'Order Created Successfully',
     myOrders: 'My Orders',
     totalAmount: 'Total Amount',
     shippingAddress: 'Shipping Address',
     orderSuccessMsg: 'Your order has been placed and recorded in My Orders.',
+    home: 'Home',
+    shop: 'Shop',
+    about: 'About',
+    account: 'Account',
+    loginBtn: 'Log In',
+    emailLabel: 'Email Address',
+    passwordLabel: 'Password',
+    forgotPasswordNotice: 'Forgot your password?',
+    forgotPasswordLink: 'Reset Password',
+    signUpForFreeLink: 'Sign Up',
+    registrationFailed: 'Registration failed. Please try again.',
+    emailAlreadyRegistered: 'Email already registered',
+    signUpTitle: 'Create Account',
+    fullNameLabel: 'Full Name',
+    phoneLabel: 'Phone Number',
+    addressLabel: 'Address',
+    signUpBtn: 'Sign Up',
   },
   zh: {
     bag: '购物袋',
@@ -47,6 +82,23 @@ const translations: Record<string, Translations> = {
     totalAmount: '总计金额',
     shippingAddress: '收货地址',
     orderSuccessMsg: '您的订单已成功提交并记录于“我的订单”中。',
+    home: '首页',
+    shop: '商店',
+    about: '关于',
+    account: '账户',
+    loginBtn: '登录',
+    emailLabel: '电子邮箱',
+    passwordLabel: '密码',
+    forgotPasswordNotice: '忘记密码？',
+    forgotPasswordLink: '重置密码',
+    signUpForFreeLink: '立即注册',
+    registrationFailed: '注册失败，请重试。',
+    emailAlreadyRegistered: '该邮箱已被注册',
+    signUpTitle: '创建账户',
+    fullNameLabel: '全名',
+    phoneLabel: '电话号码',
+    addressLabel: '地址',
+    signUpBtn: '注册',
   },
 };
 
@@ -56,10 +108,8 @@ interface LanguageContextType {
   setLanguage: (lang: string) => void;
 }
 
-// 2. 创建 Context
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
-// 3. Provider 组件
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [language, setLanguage] = useState<string>('en');
 
@@ -76,7 +126,6 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   );
 };
 
-// 4. 自定义 Hook 供各个页面组件调用
 export const useLanguage = () => {
   const context = useContext(LanguageContext);
   if (!context) {
