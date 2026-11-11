@@ -15,6 +15,7 @@ import {AccountPage} from './components/AccountPage';
 import {MyOrderPage} from './components/MyOrderPage';
 import {LoginPage} from './components/LoginPage';
 import {RegisterPage} from './components/RegisterPage';
+import {WhatsAppButton} from './components/WhatsAppButton';
 export function App(){
  const[currentTab,setCurrentTab]=useState('home');const[selectedCurrency,setSelectedCurrency]=useState('MYR');const[selectedProduct,setSelectedProduct]=useState<Product|null>(null);const[accountSubTab,setAccountSubTab]=useState('profile');const[selectedCartItemIds,setSelectedCartItemIds]=useState<string[]>([]);
  const{items}=useCart();const{user,loading}=useAuth();const totalCartCount=items.reduce((sum,i)=>sum+i.quantity,0);
@@ -33,6 +34,6 @@ export function App(){
  {currentTab==='myOrder'&&<MyOrderPage selectedCurrency={selectedCurrency}/>}
  {currentTab==='login'&&<LoginPage onLoginSuccess={()=>setCurrentTab('account')} onNavigateRegister={()=>setCurrentTab('signup')}/>}
  {currentTab==='signup'&&<RegisterPage onRegisterSuccess={()=>setCurrentTab('account')} onNavigateLogin={()=>setCurrentTab('login')}/>}
- </main><Footer selectedCurrency={selectedCurrency} onCurrencyChange={setSelectedCurrency}/></div>;
+ </main><Footer selectedCurrency={selectedCurrency} onCurrencyChange={setSelectedCurrency}/><WhatsAppButton/></div>;
 }
 export default App;
