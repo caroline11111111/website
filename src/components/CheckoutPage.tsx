@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { formatPrice } from '../config/currencies';
-import { orderService } from '../services/orderService';
+import { orderService } from '../services/orderService'; // 引入统一的服务
 
 interface CheckoutPageProps {
   selectedCurrency: string;
@@ -17,14 +17,14 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ selectedCurrency, on
 
   const totalPrice = items.reduce((sum, i) => sum + i.priceMYR * i.quantity, 0);
 
-  const handleCreateOrder = (e: React.FormEvent) => {
+  const handleCheckoutSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (items.length === 0 || isSubmitting) return;
 
     setIsSubmitting(true);
 
     try {
-      // 通过 orderService 写入订单（Key 严格为 ccc_orders_list）
+      // 1. 核心：通过 orderService 将当前购物车商品存入 localStorage
       orderService.createOrder({
         userId: user?.id || 'guest_user',
         items: items.map(item => ({
@@ -37,16 +37,16 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ selectedCurrency, on
           imageUrl: item.imageUrl,
         })),
         totalPriceMYR: totalPrice,
-        shippingAddress: address || 'Default Address',
+        shippingAddress: address || 'Malaysia',
       });
 
-      // 清空购物车
+      // 2. 清空购物车
       clearCart();
 
-      // 执行完成回调（触发跳转至订单页）
+      // 3. 触发路由跳转到 My Order 页面
       onOrderComplete();
     } catch (err) {
-      console.error('Error creating order:', err);
+      console.error('Checkout error:', err);
       setIsSubmitting(false);
     }
   };
@@ -54,7 +54,7 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ selectedCurrency, on
   return (
     <div className="w-full max-w-2xl mx-auto px-6 py-12">
       <h1 className="text-3xl font-light mb-8">Checkout</h1>
-      <form onSubmit={handleCreateOrder} className="space-y-6 bg-white p-8 rounded-lg border border-gray-200 shadow-sm">
+      <form onSubmit={handleCheckoutSubmit} className="space-y-6 bg-white p-8 rounded-lg border border-gray-200 shadow-sm">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Shipping Address</label>
           <textarea
@@ -62,7 +62,6 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ selectedCurrency, on
             rows={3}
             value={address}
             onChange={(e) => setAddress(e.target.value)}
-            placeholder="Enter your complete delivery address..."
             className="w-full border border-gray-300 rounded p-3 text-sm focus:outline-none focus:border-black"
           />
         </div>
@@ -82,13 +81,13 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ selectedCurrency, on
           <span>{formatPrice(totalPrice, selectedCurrency)}</span>
         </div>
 
-        {/* 🚨 暴力红色测试按钮：用来验证当前线上网页是否真的在运行这个仓库的代码 */}
+        {/* 即使这里的文字叫 Confirm and pay，只要绑定了 handleCheckoutSubmit 就能成功保存订单 */}
         <button
           type="submit"
           disabled={isSubmitting || items.length === 0}
-          className="w-full py-6 bg-red-600 text-white text-base font-bold uppercase tracking-widest rounded-full hover:bg-red-700 transition-all shadow-xl cursor-pointer disabled:opacity-50"
+          className="w-full py-4 bg-black text-white text-xs font-semibold uppercase tracking-widest rounded-full hover:bg-gray-800 transition-all shadow-md cursor-pointer disabled:opacity-50"
         >
-          {isSubmitting ? 'WORKING...' : '🚨 绝对是新版本：CREATE ORDER 🚨'}
+          {isSubmitting ? 'Processing...' : 'Confirm and pay'}
         </button>
       </form>
     </div>
