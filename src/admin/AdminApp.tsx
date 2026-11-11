@@ -1,89 +1,42 @@
-import React, { useEffect, useState } from 'react';
-import type { Session } from '@supabase/supabase-js';
-import { supabase } from '../lib/supabase';
-
-type Access = { is_admin: boolean; is_owner: boolean; permissions: string[] };
-
-export function AdminApp() {
-  const [session, setSession] = useState<Session | null>(null);
-  const [access, setAccess] = useState<Access | null>(null);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [busy, setBusy] = useState(true);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    let alive = true;
-    supabase.auth.getSession().then(({ data, error }) => {
-      if (!alive) return;
-      if (error) setError(error.message);
-      setSession(data.session);
-      setBusy(false);
-    });
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, next) => {
-      setSession(next);
-      setAccess(null);
-    });
-    return () => { alive = false; listener.subscription.unsubscribe(); };
-  }, []);
-
-  useEffect(() => {
-    if (!session) { setAccess(null); return; }
-    let alive = true;
-    supabase.rpc('get_my_admin_access').then(({ data, error }) => {
-      if (!alive) return;
-      if (error) setError(error.message);
-      else setAccess(data as Access);
-    });
-    return () => { alive = false; };
-  }, [session]);
-
-  async function signIn(event: React.FormEvent) {
-    event.preventDefault();
-    setBusy(true); setError('');
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) setError(error.message);
-    setBusy(false);
-  }
-
-  async function signOut() {
-    await supabase.auth.signOut();
-    setSession(null); setAccess(null);
-  }
-
-  if (busy) return <main className="min-h-screen grid place-items-center">Loading Admin Portal…</main>;
-  if (!session) return (
-    <main className="min-h-screen bg-slate-100 grid place-items-center p-6">
-      <form onSubmit={signIn} className="w-full max-w-md bg-white rounded-xl border p-8 space-y-4 shadow-sm">
-        <p className="text-xs uppercase tracking-[.25em] text-slate-500">Separate Admin Portal</p>
-        <h1 className="text-2xl font-semibold">Administrator Sign In</h1>
-        {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
-        <label className="block text-sm">Email<input className="mt-1 w-full border rounded-lg p-3" type="email" required value={email} onChange={e=>setEmail(e.target.value)} /></label>
-        <label className="block text-sm">Password<input className="mt-1 w-full border rounded-lg p-3" type="password" required value={password} onChange={e=>setPassword(e.target.value)} /></label>
-        <button disabled={busy} className="w-full rounded-lg bg-slate-900 text-white p-3 disabled:opacity-50">Sign in</button>
-        <p className="text-xs text-slate-500">Customer accounts do not automatically have Admin access.</p>
-      </form>
-    </main>
-  );
-
-  if (!access) return <main className="min-h-screen grid place-items-center p-6"><div className="max-w-md text-center space-y-3"><h1 className="text-xl font-semibold">Checking administrator access</h1>{error && <p className="text-red-600 text-sm">{error}</p>}<p className="text-sm text-slate-500">Your account must be explicitly registered as an active Admin or Owner.</p><button onClick={signOut} className="underline text-sm">Sign out</button></div></main>;
-  if (!access.is_admin && !access.is_owner) return <main className="min-h-screen grid place-items-center p-6"><div className="text-center space-y-3"><h1 className="text-xl font-semibold">Access denied</h1><p className="text-sm text-slate-500">This account is not authorized to use the Admin Portal.</p><button onClick={signOut} className="underline text-sm">Sign out</button></div></main>;
-
-  const can = (permission: string) => access.is_owner || access.permissions.includes(permission);
-  return (
-    <main className="min-h-screen bg-slate-50">
-      <header className="bg-white border-b px-6 py-4 flex items-center justify-between"><div><p className="text-xs uppercase tracking-widest text-slate-500">Independent application</p><h1 className="text-xl font-semibold">Admin Dashboard</h1></div><div className="flex items-center gap-4"><span className="text-xs text-slate-500">{session.user.email}</span><button onClick={signOut} className="text-sm underline">Sign out</button></div></header>
-      <section className="max-w-7xl mx-auto p-6 space-y-6">
-        <div><h2 className="text-lg font-semibold">Dashboard overview</h2><p className="text-sm text-slate-500">Your live access is checked against Supabase on sign-in.</p></div>
-        <div className="grid gap-4 md:grid-cols-3">
-          {[
-            ['Products','products.view'],['Orders','orders.view'],['Payments','payments.review'],
-            ['Inventory','inventory.view'],['Shipments','shipments.manage'],['Customers','customers.view'],
-            ['Content','content.manage'],['Shipping Rates','shipping_rates.manage'],['Admin & Roles','admins.manage']
-          ].map(([label, permission]) => <article key={permission} className="bg-white border rounded-xl p-5"><h3 className="font-medium">{label}</h3><p className="text-xs text-slate-500 mt-2">{can(permission) ? 'Access granted' : 'No permission assigned'}</p></article>)}
-        </div>
-        <p className="text-xs text-slate-500">Management screens and transactional actions are being connected to the secured database functions. Do not use this portal for live order processing until those workflows have been tested.</p>
-      </section>
-    </main>
-  );
+import React,{useEffect,useState} from 'react';
+import type {Session} from '@supabase/supabase-js';
+import {supabase} from '../lib/supabase';
+type Access={is_admin:boolean;is_owner:boolean;permissions:string[]};
+type ProductRow={id:string;name:string;sku:string;price_myr:number;stock_quantity:number;reserved_quantity:number;is_published:boolean;is_archived:boolean;created_at:string};
+type OrderRow={id:string;order_number:string;order_status:string;payment_status:string;total_myr:number;created_at:string};
+type ProofRow={id:string;order_id:string;storage_path:string;original_filename:string;review_status:string;created_at:string;orders?:{order_number:string}};
+export function AdminApp(){
+ const[session,setSession]=useState<Session|null>(null);const[access,setAccess]=useState<Access|null>(null);
+ const[email,setEmail]=useState('');const[password,setPassword]=useState('');const[busy,setBusy]=useState(true);const[error,setError]=useState('');
+ const[view,setView]=useState('overview');const[products,setProducts]=useState<ProductRow[]>([]);const[orders,setOrders]=useState<OrderRow[]>([]);const[proofs,setProofs]=useState<ProofRow[]>([]);
+ const[name,setName]=useState('');const[sku,setSku]=useState('');const[price,setPrice]=useState('');const[stock,setStock]=useState('1');const[weight,setWeight]=useState('0');const[description,setDescription]=useState('');
+ useEffect(()=>{let alive=true;supabase.auth.getSession().then(({data,error})=>{if(!alive)return;if(error)setError(error.message);setSession(data.session);setBusy(false);});const{data:listener}=supabase.auth.onAuthStateChange((_event,next)=>{setSession(next);setAccess(null);});return()=>{alive=false;listener.subscription.unsubscribe();};},[]);
+ useEffect(()=>{if(!session){setAccess(null);return;}let alive=true;supabase.rpc('get_my_admin_access').then(({data,error})=>{if(!alive)return;if(error)setError(error.message);else setAccess(data as Access);});return()=>{alive=false;};},[session]);
+ const can=(permission:string)=>!!access&&(access.is_owner||access.permissions.includes(permission));
+ const signIn=async(e:React.FormEvent)=>{e.preventDefault();setBusy(true);setError('');const{error}=await supabase.auth.signInWithPassword({email,password});if(error)setError(error.message);setBusy(false);};
+ const signOut=async()=>{await supabase.auth.signOut();setSession(null);setAccess(null);};
+ const loadProducts=async()=>{const{data,error}=await supabase.from('products').select('id,name,sku,price_myr,stock_quantity,reserved_quantity,is_published,is_archived,created_at').order('created_at',{ascending:false});if(error)setError(error.message);else setProducts((data||[]) as ProductRow[]);};
+ const loadOrders=async()=>{const{data,error}=await supabase.from('orders').select('id,order_number,order_status,payment_status,total_myr,created_at').order('created_at',{ascending:false}).limit(100);if(error)setError(error.message);else setOrders((data||[]) as OrderRow[]);};
+ const loadProofs=async()=>{const{data,error}=await supabase.from('payment_proofs').select('id,order_id,storage_path,original_filename,review_status,created_at,orders(order_number)').eq('review_status','pending').order('created_at',{ascending:true});if(error)setError(error.message);else setProofs((data||[]) as unknown as ProofRow[]);};
+ useEffect(()=>{if(view==='products'&&can('products.view'))void loadProducts();if(view==='orders'&&can('orders.view'))void loadOrders();if(view==='payments'&&can('payments.review'))void loadProofs();},[view,access]);
+ const createProduct=async(e:React.FormEvent)=>{e.preventDefault();setError('');const{error}=await supabase.from('products').insert({name:name.trim(),sku:sku.trim(),price_myr:Number(price),stock_quantity:Number(stock),weight_grams:Number(weight),description,is_published:false,inventory_mode:Number(stock)<=1?'single_item':'multiple'});if(error)setError(error.message);else{nameReset();await loadProducts();}};
+ function nameReset(){setName('');setSku('');setPrice('');setStock('1');setWeight('0');setDescription('');}
+ const togglePublish=async(p:ProductRow)=>{const{error}=await supabase.from('products').update({is_published:!p.is_published}).eq('id',p.id);if(error)setError(error.message);else await loadProducts();};
+ const archive=async(p:ProductRow)=>{const reason=window.prompt('Enter archive reason:');if(!reason?.trim())return;const{error}=await supabase.rpc('archive_product',{p_product_id:p.id,p_reason:reason});if(error)setError(error.message);else await loadProducts();};
+ const review=async(p:ProofRow,decision:'approved'|'rejected')=>{const note=decision==='rejected'?window.prompt('Reason for rejecting this payment proof:'): 'Payment proof approved';if(decision==='rejected'&&!note?.trim())return;const{error}=await supabase.rpc('admin_review_payment',{p_payment_proof_id:p.id,p_decision:decision,p_note:note||''});if(error)setError(error.message);else await loadProofs();};
+ const openProof=async(path:string)=>{const{data,error}=await supabase.storage.from('payment-proofs').createSignedUrl(path,60);if(error)setError(error.message);else window.open(data.signedUrl,'_blank','noopener,noreferrer');};
+ if(busy)return <main className="min-h-screen grid place-items-center">Loading Admin Portal…</main>;
+ if(!session)return <main className="min-h-screen bg-slate-100 grid place-items-center p-6"><form onSubmit={signIn} className="w-full max-w-md bg-white rounded-xl border p-8 space-y-4 shadow-sm"><p className="text-xs uppercase tracking-[.25em] text-slate-500">Separate Admin Portal</p><h1 className="text-2xl font-semibold">Administrator Sign In</h1>{error&&<p role="alert" className="text-sm text-red-600">{error}</p>}<label className="block text-sm">Email<input className="mt-1 w-full border rounded-lg p-3" type="email" required value={email} onChange={e=>setEmail(e.target.value)}/></label><label className="block text-sm">Password<input className="mt-1 w-full border rounded-lg p-3" type="password" required value={password} onChange={e=>setPassword(e.target.value)}/></label><button disabled={busy} className="w-full rounded-lg bg-slate-900 text-white p-3">Sign in</button><p className="text-xs text-slate-500">Customer accounts do not automatically have Admin access.</p></form></main>;
+ if(!access)return <main className="min-h-screen grid place-items-center p-6"><div className="max-w-md text-center space-y-3"><h1 className="text-xl font-semibold">Checking administrator access</h1>{error&&<p className="text-red-600 text-sm">{error}</p>}<p className="text-sm text-slate-500">Your account must be explicitly registered as an active Admin or Owner.</p><button onClick={signOut} className="underline text-sm">Sign out</button></div></main>;
+ if(!access.is_admin&&!access.is_owner)return <main className="min-h-screen grid place-items-center p-6"><div className="text-center space-y-3"><h1 className="text-xl font-semibold">Access denied</h1><p className="text-sm text-slate-500">This account is not authorized to use the Admin Portal.</p><button onClick={signOut} className="underline text-sm">Sign out</button></div></main>;
+ const nav=[['overview','Overview',true],['products','Products',can('products.view')],['orders','Orders',can('orders.view')],['payments','Payment Review',can('payments.review')],['inventory','Inventory',can('inventory.view')],['content','Storefront Content',can('content.manage')],['shipping','Shipping Rates',can('shipping_rates.manage')],['admins','Admins & Roles',can('admins.manage')||can('roles.manage')],['audit','Audit Logs',can('audit_logs.view')]];
+ return <main className="min-h-screen bg-slate-50"><header className="bg-white border-b px-6 py-4 flex items-center justify-between"><div><p className="text-xs uppercase tracking-widest text-slate-500">Independent Admin entry</p><h1 className="text-xl font-semibold">Admin Dashboard</h1></div><div className="flex items-center gap-4"><span className="text-xs text-slate-500">{session.user.email}</span><button onClick={signOut} className="text-sm underline">Sign out</button></div></header>
+ <div className="max-w-7xl mx-auto p-6 grid grid-cols-1 md:grid-cols-[220px_1fr] gap-6"><aside className="bg-white border rounded-xl p-3 h-fit space-y-1">{nav.filter(n=>n[2]).map(n=><button key={String(n[0])} onClick={()=>{setView(String(n[0]));setError('');}} className={'w-full text-left px-3 py-2 rounded-lg text-sm '+(view===n[0]?'bg-slate-900 text-white':'hover:bg-slate-100')}>{n[1]}</button>)}</aside>
+ <section className="space-y-5 min-w-0">{error&&<p role="alert" className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg p-3">{error}</p>}
+ {view==='overview'&&<><div><h2 className="text-lg font-semibold">Dashboard Overview</h2><p className="text-sm text-slate-500">Access is checked against current Supabase permissions.</p></div><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{nav.filter(n=>n[2]&&n[0]!=='overview').map(n=><button key={String(n[0])} onClick={()=>setView(String(n[0]))} className="bg-white border rounded-xl p-5 text-left hover:shadow-sm"><h3 className="font-medium">{n[1]}</h3><p className="text-xs text-slate-500 mt-2">Open module</p></button>)}</div></>}
+ {view==='products'&&<><div className="flex justify-between items-center"><h2 className="text-lg font-semibold">Products</h2><button onClick={()=>void loadProducts()} className="text-sm underline">Refresh</button></div>{can('products.create')&&<form onSubmit={createProduct} className="bg-white border rounded-xl p-5 grid gap-3 md:grid-cols-2"><h3 className="md:col-span-2 font-medium">Add Product</h3><input required placeholder="Product name" value={name} onChange={e=>setName(e.target.value)} className="border rounded-lg p-2"/><input required placeholder="Unique SKU" value={sku} onChange={e=>setSku(e.target.value)} className="border rounded-lg p-2"/><input required type="number" min="0" step="0.01" placeholder="Price (MYR)" value={price} onChange={e=>setPrice(e.target.value)} className="border rounded-lg p-2"/><input required type="number" min="0" step="1" placeholder="Stock quantity" value={stock} onChange={e=>setStock(e.target.value)} className="border rounded-lg p-2"/><input required type="number" min="0" step="1" placeholder="Weight (grams)" value={weight} onChange={e=>setWeight(e.target.value)} className="border rounded-lg p-2"/><textarea placeholder="Description" value={description} onChange={e=>setDescription(e.target.value)} className="border rounded-lg p-2 md:col-span-2"/><button className="bg-slate-900 text-white rounded-lg p-3 md:col-span-2">Create as Unpublished Product</button></form>}<div className="bg-white border rounded-xl overflow-x-auto"><table className="w-full text-sm"><thead className="bg-slate-100"><tr><th className="p-3 text-left">Product</th><th className="p-3 text-left">SKU</th><th className="p-3 text-left">Price</th><th className="p-3 text-left">Stock / Reserved</th><th className="p-3 text-left">Status</th><th className="p-3">Actions</th></tr></thead><tbody>{products.map(p=><tr key={p.id} className="border-t"><td className="p-3">{p.name}</td><td className="p-3">{p.sku}</td><td className="p-3">RM {Number(p.price_myr).toFixed(2)}</td><td className="p-3">{p.stock_quantity} / {p.reserved_quantity}</td><td className="p-3">{p.is_archived?'Archived':p.is_published?'Published':'Draft'}</td><td className="p-3 space-x-2">{!p.is_archived&&can('products.edit')&&<button onClick={()=>void togglePublish(p)} className="underline">{p.is_published?'Unpublish':'Publish'}</button>}{!p.is_archived&&can('products.archive')&&<button onClick={()=>void archive(p)} className="text-red-600 underline">Archive</button>}</td></tr>)}</tbody></table></div></>}
+ {view==='orders'&&<><div className="flex justify-between"><h2 className="text-lg font-semibold">Orders</h2><button onClick={()=>void loadOrders()} className="text-sm underline">Refresh</button></div><div className="bg-white border rounded-xl overflow-x-auto"><table className="w-full text-sm"><thead className="bg-slate-100"><tr><th className="p-3 text-left">Order</th><th className="p-3 text-left">Date</th><th className="p-3 text-left">Order Status</th><th className="p-3 text-left">Payment</th><th className="p-3 text-left">Total</th><th className="p-3">Action</th></tr></thead><tbody>{orders.map(o=><tr key={o.id} className="border-t"><td className="p-3">{o.order_number}</td><td className="p-3">{new Date(o.created_at).toLocaleDateString()}</td><td className="p-3">{o.order_status}</td><td className="p-3">{o.payment_status}</td><td className="p-3">RM {Number(o.total_myr).toFixed(2)}</td><td className="p-3">{o.order_status==='shipped'&&can('orders.complete')&&<button onClick={async()=>{const reason=window.prompt('Completion reason:');if(!reason?.trim())return;const{error}=await supabase.rpc('admin_complete_order',{p_order_id:o.id,p_reason:reason});if(error)setError(error.message);else await loadOrders();}} className="underline">Mark completed</button>}</td></tr>)}</tbody></table></div></>}
+ {view==='payments'&&<><div className="flex justify-between"><h2 className="text-lg font-semibold">Payment Proof Review</h2><button onClick={()=>void loadProofs()} className="text-sm underline">Refresh</button></div><div className="space-y-3">{proofs.length===0?<p className="bg-white border rounded-xl p-6 text-sm text-slate-500">No pending payment proofs.</p>:proofs.map(p=><article key={p.id} className="bg-white border rounded-xl p-5 flex flex-wrap items-center justify-between gap-4"><div><p className="font-medium">{p.orders?.order_number||p.order_id}</p><p className="text-xs text-slate-500">{p.original_filename} · {new Date(p.created_at).toLocaleString()}</p><button onClick={()=>void openProof(p.storage_path)} className="text-xs underline mt-2">Open private receipt</button></div><div className="flex gap-2"><button onClick={()=>void review(p,'approved')} className="px-4 py-2 rounded-lg bg-slate-900 text-white text-xs">Approve</button><button onClick={()=>void review(p,'rejected')} className="px-4 py-2 rounded-lg border text-xs">Reject</button></div></article>)}</div></>}
+ {['inventory','content','shipping','admins','audit'].includes(view)&&<div className="bg-white border rounded-xl p-6"><h2 className="font-semibold">{nav.find(n=>n[0]===view)?.[1]}</h2><p className="text-sm text-slate-500 mt-2">Database permissions and protected workflows are prepared. This management screen is not yet complete; do not use this module for live operations.</p></div>}
+ </section></div></main>;
 }
