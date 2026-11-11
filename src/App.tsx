@@ -5,6 +5,7 @@ import {Product} from './config/products';
 import {currencies} from './config/currencies';
 import {Banner} from './components/Banner';
 import {AboutPage} from './components/AboutPage';
+import {Footer} from './components/Footer';
 import {Slideshow} from './components/Slideshow';
 import {ShopPage} from './components/ShopPage';
 import {ProductDetailPage} from './components/ProductDetailPage';
@@ -32,6 +33,6 @@ export function App(){
  {currentTab==='myOrder'&&<MyOrderPage selectedCurrency={selectedCurrency}/>}
  {currentTab==='login'&&<LoginPage onLoginSuccess={()=>setCurrentTab('account')} onNavigateRegister={()=>setCurrentTab('signup')}/>}
  {currentTab==='signup'&&<RegisterPage onRegisterSuccess={()=>setCurrentTab('account')} onNavigateLogin={()=>setCurrentTab('login')}/>}
- </main><footer className="bg-white border-t py-8 text-center text-xs text-gray-500">© {new Date().getFullYear()} Online Store. All Rights Reserved.</footer></div>;
+ </main><Footer selectedCurrency={selectedCurrency} onCurrencyChange={setSelectedCurrency}/></div>;
 }
 export default App;
