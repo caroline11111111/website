@@ -19,7 +19,7 @@ export const CheckoutPage:React.FC<CheckoutPageProps>=({selectedCurrency,selecte
   supabase.rpc('quote_shipping',{p_cart_item_ids:selectedItemIds,p_country_code:country,p_region_code:region||null}).then(({data,error})=>{if(!alive)return;if(error){setQuote(null);setQuoteError(error.message);}else{setQuote(data);setQuoteError('');}});
   return()=>{alive=false;};
  },[user,selectedItemIds.join(','),country,region]);
- useEffect(()=>{if(!user)return;supabase.from('customer_addresses').select('*').eq('user_id',user.id).eq('is_default',true).maybeSingle().then(({data})=>{if(data){setRecipientName(data.recipient_name);setPhone(data.phone);setLine1(data.address_line_1);setLine2(data.address_line_2||'');setCity(data.city);setRegion(country==='MY'?normalizeMalaysiaRegion(data.state_region||''):(data.state_region||''));setPostal(data.postal_code||'');setCountry(data.country_code);}});},[user]);
+ useEffect(()=>{if(!user)return;supabase.from('customer_addresses').select('*').eq('user_id',user.id).eq('is_default',true).maybeSingle().then(({data})=>{if(data){setRecipientName(data.recipient_name);setPhone(data.phone);setLine1(data.address_line_1);setLine2(data.address_line_2||'');setCity(data.city);setRegion((data.country_code||'').toUpperCase()==='MY'?normalizeMalaysiaRegion(data.state_region||''):(data.state_region||''));setPostal(data.postal_code||'');setCountry(data.country_code);}});},[user]);
  const submit=async(e:React.FormEvent)=>{e.preventDefault();setError('');
   if(!user){setError('Please sign in before checkout.');return;}if(!selected.length){setError('Please return to your bag and select items.');return;}
   if(!quote){setError(quoteError||'Please wait for a valid shipping quote before submitting.');return;}
