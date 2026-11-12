@@ -1,10 +1,10 @@
 import React,{useCallback,useEffect,useState} from 'react';
-import {formatPrice} from '../config/currencies';
+import {useCurrency} from '../context/CurrencyContext';
 import {supabase} from '../lib/supabase';
 import {useAuth} from '../context/AuthContext';
 type OrderRow={id:string;order_number:string;order_status:string;payment_status:string;recipient_name:string;recipient_phone:string;shipping_address:any;subtotal_myr:number;shipping_fee_myr:number;total_myr:number;created_at:string;order_items:Array<{id:string;product_name:string;brand_name:string|null;product_image:string|null;unit_price_myr:number;quantity:number;line_total_myr:number}>;payment_proofs?:Array<{id:string;review_status:string;submission_number:number;created_at:string}>};
 export const MyOrderPage:React.FC<{selectedCurrency:string}>=({selectedCurrency})=>{
- const{user}=useAuth();const[orders,setOrders]=useState<OrderRow[]>([]);const[loading,setLoading]=useState(true);const[error,setError]=useState('');
+ const{formatPrice}=useCurrency();const{user}=useAuth();const[orders,setOrders]=useState<OrderRow[]>([]);const[loading,setLoading]=useState(true);const[error,setError]=useState('');
  const load=useCallback(async()=>{if(!user){setOrders([]);setLoading(false);return;}setLoading(true);const{data,error}=await supabase.from('orders').select('id,order_number,order_status,payment_status,recipient_name,recipient_phone,shipping_address,subtotal_myr,shipping_fee_myr,total_myr,created_at,order_items(id,product_name,brand_name,product_image,unit_price_myr,quantity,line_total_myr),payment_proofs(id,review_status,submission_number,created_at)').order('created_at',{ascending:false});if(error)setError(error.message);else setOrders((data||[]) as OrderRow[]);setLoading(false);},[user]);
  useEffect(()=>{void load();},[load]);
  const confirm=async(id:string)=>{const{error}=await supabase.rpc('confirm_order_received',{p_order_id:id});if(error)setError(error.message);else await load();};
