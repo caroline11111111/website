@@ -1,10 +1,11 @@
 import React,{useEffect,useMemo,useState} from 'react';
 import {Product} from '../config/products';
-import {formatPrice} from '../config/currencies';
+import {useCurrency} from '../context/CurrencyContext';
 import {SiteImage} from './SiteImage';
 import {supabase} from '../lib/supabase';
 interface ShopPageProps{selectedCurrency:string;onSelectProduct:(product:Product)=>void;}
 export const ShopPage:React.FC<ShopPageProps>=({selectedCurrency,onSelectProduct})=>{
+ const{formatPrice}=useCurrency();
  const[products,setProducts]=useState<Product[]>([]);const[loading,setLoading]=useState(true);const[error,setError]=useState('');
  const[selectedCategory,setSelectedCategory]=useState('All');const[selectedBrand,setSelectedBrand]=useState('All');const[currentPage,setCurrentPage]=useState(1);const pageSize=12;
  useEffect(()=>{let alive=true;(async()=>{setLoading(true);setError('');
