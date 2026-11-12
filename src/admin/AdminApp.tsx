@@ -59,13 +59,14 @@ export function AdminApp(){
  };
  const loadInStockSkuCount=async()=>{
   const[p,v]=await Promise.all([
-   supabase.from('products').select('sku,stock_quantity,reserved_quantity').eq('is_archived',false),
-   supabase.from('product_variants').select('sku,stock_quantity,reserved_quantity,products!inner(is_archived)').eq('is_active',true).eq('products.is_archived',false)
+   supabase.from('products').select('id,sku,stock_quantity,reserved_quantity').eq('is_archived',false),
+   supabase.from('product_variants').select('product_id,sku,stock_quantity,reserved_quantity').eq('is_active',true)
   ]);
   if(p.error){setError(p.error.message);return;}if(v.error){setError(v.error.message);return;}
+  const activeProductIds=new Set((p.data||[]).map(row=>row.id));
   const skus=new Set<string>();
   for(const row of p.data||[])if(row.sku?.trim()&&Number(row.stock_quantity)-Number(row.reserved_quantity)>0)skus.add(row.sku.trim().toUpperCase());
-  for(const row of v.data||[])if(row.sku?.trim()&&Number(row.stock_quantity)-Number(row.reserved_quantity)>0)skus.add(row.sku.trim().toUpperCase());
+  for(const row of v.data||[])if(activeProductIds.has(row.product_id)&&row.sku?.trim()&&Number(row.stock_quantity)-Number(row.reserved_quantity)>0)skus.add(row.sku.trim().toUpperCase());
   setInStockSkuCount(skus.size);
  };
  const loadCurrencySettings=async()=>{
