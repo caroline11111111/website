@@ -1,5 +1,5 @@
 import React,{useEffect,useState} from 'react';
-import {supabase} from '../../lib/supabase';
+import {supabase} from '../lib/supabase';
 
 type PageKey='about'|'banner';
 type Block={id:string;type:'text'|'image'|'divider'|'spacer'|'shape';text?:string;image_path?:string;alt?:string;size?:'small'|'medium'|'large';shape?:'circle'|'square'|'triangle';align?:'left'|'center'|'right';height?:number};
