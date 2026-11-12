@@ -1,7 +1,7 @@
 import React,{useEffect,useMemo,useState} from 'react';
 import {useAuth} from '../context/AuthContext';
 import {useCart} from '../context/CartContext';
-import {formatPrice} from '../config/currencies';
+import {useCurrency} from '../context/CurrencyContext';
 import {supabase} from '../lib/supabase';
 interface CheckoutPageProps{selectedCurrency:string;selectedItemIds:string[];onOrderComplete:()=>void;}
 const MALAYSIA_REGIONS=[{code:'JHR',name:'Johor'},{code:'KDH',name:'Kedah'},{code:'KTN',name:'Kelantan'},{code:'MLK',name:'Melaka'},{code:'NSN',name:'Negeri Sembilan'},{code:'PHG',name:'Pahang'},{code:'PNG',name:'Penang'},{code:'PRK',name:'Perak'},{code:'PLS',name:'Perlis'},{code:'SGR',name:'Selangor'},{code:'TRG',name:'Terengganu'},{code:'KUL',name:'Kuala Lumpur'},{code:'LBN',name:'Labuan'},{code:'PJY',name:'Putrajaya'},{code:'SBH',name:'Sabah'},{code:'SWK',name:'Sarawak'}];
@@ -33,7 +33,7 @@ const explainCheckoutError=(message:string,proofUploaded:boolean):string=>{
   : `Order was not created. ${explanation}`;
 };
 export const CheckoutPage:React.FC<CheckoutPageProps>=({selectedCurrency,selectedItemIds,onOrderComplete})=>{
- const{user}=useAuth();const{items,refresh}=useCart();
+ const{formatPrice}=useCurrency();const{user}=useAuth();const{items,refresh}=useCart();
  const[recipientName,setRecipientName]=useState(user?.name||'');const[phone,setPhone]=useState(user?.phone||'');
  const[line1,setLine1]=useState('');const[line2,setLine2]=useState('');const[city,setCity]=useState('');
  const[region,setRegion]=useState('');const[postal,setPostal]=useState('');const[country,setCountry]=useState('MY');
