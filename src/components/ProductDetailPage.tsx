@@ -2,13 +2,13 @@ import React,{useEffect,useMemo,useState} from 'react';
 import {Product} from '../config/products';
 import {useCart} from '../context/CartContext';
 import {useAuth} from '../context/AuthContext';
-import {formatPrice} from '../config/currencies';
+import {useCurrency} from '../context/CurrencyContext';
 import {SiteImage} from './SiteImage';
 import {supabase} from '../lib/supabase';
 type Variant={id:string;variant_name:string;variant_value:string;sku:string;price_myr:number;stock_quantity:number;reserved_quantity:number;weight_grams:number};
 interface ProductDetailPageProps{product:Product;selectedCurrency:string;onBack:()=>void;onGoBag:()=>void;onLogin:()=>void;}
 export const ProductDetailPage:React.FC<ProductDetailPageProps>=({product,selectedCurrency,onBack,onGoBag,onLogin})=>{
- const{addToCart}=useCart();const{user}=useAuth();const[activeImgIndex,setActiveImgIndex]=useState(0);const[busy,setBusy]=useState(false);const[message,setMessage]=useState('');
+ const{formatPrice}=useCurrency();const{addToCart}=useCart();const{user}=useAuth();const[activeImgIndex,setActiveImgIndex]=useState(0);const[busy,setBusy]=useState(false);const[message,setMessage]=useState('');
  const[variants,setVariants]=useState<Variant[]>([]);const[selectedVariantId,setSelectedVariantId]=useState('');
  useEffect(()=>{let alive=true;supabase.from('product_variants').select('id,variant_name,variant_value,sku,price_myr,stock_quantity,reserved_quantity,weight_grams').eq('product_id',product.id).eq('is_active',true).order('display_order').then(({data,error})=>{if(!alive)return;if(error){setMessage(error.message);return;}const rows=(data||[]) as Variant[];setVariants(rows);setSelectedVariantId(rows.length===1?rows[0].id:'');});return()=>{alive=false;};},[product.id]);
  const selectedVariant=useMemo(()=>variants.find(v=>v.id===selectedVariantId),[variants,selectedVariantId]);
