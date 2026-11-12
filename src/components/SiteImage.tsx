@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 interface SiteImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
   fallbackUrl?: string;
@@ -6,6 +6,7 @@ interface SiteImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
 
 export const SiteImage: React.FC<SiteImageProps> = ({ src, fallbackUrl, alt, ...props }) => {
   const [imgSrc, setImgSrc] = useState(src);
+  useEffect(() => { setImgSrc(src); }, [src]);
 
   return (
     <img
