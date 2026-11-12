@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLanguage } from '../context/LanguageContext';
-import { currencies } from '../config/currencies';
+import { useCurrency } from '../context/CurrencyContext';
 
 interface FooterProps {
   selectedCurrency: string;
@@ -9,6 +9,7 @@ interface FooterProps {
 
 export const Footer: React.FC<FooterProps> = ({ selectedCurrency, onCurrencyChange }) => {
   const { language: lang, setLanguage: setLang } = useLanguage();
+  const { currencies } = useCurrency();
 
   return (
     <footer className="w-full bg-gray-100 text-gray-700 py-8 px-6 mt-auto border-t border-gray-200 text-sm">
@@ -38,8 +39,8 @@ export const Footer: React.FC<FooterProps> = ({ selectedCurrency, onCurrencyChan
             onChange={(e) => onCurrencyChange(e.target.value)}
             className="bg-white border border-gray-300 rounded px-3 py-1.5 focus:outline-none"
           >
-            {Object.keys(currencies).map(c => (
-              <option key={c} value={c}>{c} ({currencies[c].symbol})</option>
+            {currencies.filter(c => c.isActive).map(c => (
+              <option key={c.code} value={c.code}>{c.code} ({c.symbol})</option>
             ))}
           </select>
         </div>
