@@ -1,10 +1,10 @@
 import React,{useEffect,useState} from 'react';
 import {useCart} from '../context/CartContext';
-import {formatPrice} from '../config/currencies';
+import {useCurrency} from '../context/CurrencyContext';
 import {SiteImage} from './SiteImage';
 interface BagPageProps{selectedCurrency:string;onGoCheckout:(selectedIds:string[])=>void;onGoShop:()=>void;}
 export const BagPage:React.FC<BagPageProps>=({selectedCurrency,onGoCheckout,onGoShop})=>{
- const{items,removeFromCart,clearCart,loading}=useCart();const[selectedIds,setSelectedIds]=useState<string[]>([]);
+ const{formatPrice}=useCurrency();const{items,removeFromCart,clearCart,loading}=useCart();const[selectedIds,setSelectedIds]=useState<string[]>([]);
  useEffect(()=>{setSelectedIds(items.map(i=>i.id));},[items]);
  const toggle=(id:string)=>setSelectedIds(prev=>prev.includes(id)?prev.filter(x=>x!==id):[...prev,id]);
  const total=items.filter(i=>selectedIds.includes(i.id)).reduce((sum,i)=>sum+i.priceMYR*i.quantity,0);
