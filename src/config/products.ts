@@ -5,6 +5,7 @@ export interface Product {
   name: string;
   brand: string;
   category: string;
+  categories?: string[];
   condition?: string;
   color?: string;
   sku?: string;
