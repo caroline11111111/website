@@ -54,6 +54,11 @@ export const AccountPage:React.FC<AccountPageProps>=({onGoOrders})=>{
    supabase.auth.updateUser({data:{full_name:name.trim(),phone:phone.trim()}})
   ]);
   if(profileError||authError){setError(profileError?.message||authError?.message||'Unable to save profile.');setBusy(false);return;}
+  if(!hasAddress&&defaultAddressId){
+   const{error:clearAddressError}=await supabase.from('customer_addresses').update({is_default:false}).eq('id',defaultAddressId).eq('user_id',user.id);
+   if(clearAddressError){setError('Profile saved, but the default address could not be cleared: '+clearAddressError.message);setBusy(false);return;}
+   setDefaultAddressId(null);
+  }
   if(hasAddress){
    const payload={user_id:user.id,recipient_name:name.trim(),phone:phone.trim(),address_line_1:addressLine1.trim(),address_line_2:addressLine2.trim()||null,city:city.trim(),state_region:region.trim()||null,postal_code:postalCode.trim()||null,country_code:countryCode.trim().toUpperCase(),is_default:true};
    let addressError:null|string=null;
