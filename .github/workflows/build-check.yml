@@ -25,5 +25,7 @@ jobs:
           node-version: 24
       - name: Install dependencies
         run: npm install --no-audit --no-fund
+      - name: Build customer storefront
+        run: npm run build
       - name: Build standalone Admin portal
         run: npm run build:admin
