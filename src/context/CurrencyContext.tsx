@@ -45,6 +45,7 @@ export const CurrencyProvider:React.FC<{children:React.ReactNode}>=({children})=
   formatPrice:(amount,currencyCode)=>{
    const currency=currencies.find(row=>row.code===currencyCode&&row.isActive);
    if(!currency||!Number.isFinite(amount))return 'Price unavailable';
+   if(currencyCode!=='MYR')return 'Price not configured';
    // Amounts passed to this formatter must already be denominated in currencyCode.
    // Never convert a MYR amount and present it as another currency.
    return `${currency.symbol} ${amount.toLocaleString(undefined,{minimumFractionDigits:currency.decimalPlaces,maximumFractionDigits:currency.decimalPlaces})}`;
