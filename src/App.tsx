@@ -87,7 +87,7 @@ export function App() {
                   setAccountSubTab('profile');
                   setCurrentTab('account');
                 } else {
-                  setCurrentTab('account'); // 支持访客查看 Account/Order 状态
+                  setCurrentTab('login');
                 }
               }}
               className="text-xs uppercase tracking-wider font-semibold hover:opacity-70 transition-opacity cursor-pointer"
