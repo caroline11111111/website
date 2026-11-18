@@ -187,6 +187,10 @@ export function ProductsManagement({ can }: { can: (permission: string) => boole
       setError('Single-item products can only have an initial stock quantity of 0 or 1. Choose Multiple units for larger stock.');
       return;
     }
+    if (!editingId && stock > 0 && !can('inventory.adjust')) {
+      setError('Your account does not have permission to record opening stock. Create the product with 0 stock or ask an authorized Admin to adjust inventory.');
+      return;
+    }
     const payload = {
       name: draft.name.trim(),
       sku: draft.sku.trim(),
@@ -204,13 +208,31 @@ export function ProductsManagement({ can }: { can: (permission: string) => boole
     setSaving(true);
     const result = editingId
       ? await supabase.from('products').update(payload).eq('id', editingId).select('id').single()
-      : await supabase.from('products').insert({ ...payload, stock_quantity: stock, is_published: false }).select('id').single();
-    setSaving(false);
+      : await supabase.from('products').insert({ ...payload, stock_quantity: 0, is_published: false }).select('id').single();
     if (result.error) {
+      setSaving(false);
       setError(result.error.message);
       return;
     }
-    setNotice(editingId ? 'Product updated.' : 'Product created as an unpublished draft.');
+    if (!editingId && stock > 0) {
+      const { error: inventoryError } = await supabase.rpc('adjust_inventory', {
+        p_product_id: result.data.id,
+        p_variant_id: null,
+        p_quantity_change: stock,
+        p_reason: 'Initial stock on product creation',
+        p_event_key: crypto.randomUUID(),
+      });
+      if (inventoryError) {
+        setSaving(false);
+        setError(`Product was created as a draft, but opening stock was not recorded: ${inventoryError.message}. Use Inventory to add stock.`);
+        setEditingId(null);
+        setDraft(emptyDraft());
+        await loadProducts();
+        return;
+      }
+    }
+    setSaving(false);
+    setNotice(editingId ? 'Product updated.' : stock > 0 ? 'Product created as a draft and opening stock recorded.' : 'Product created as an unpublished draft.');
     setEditingId(null);
     setDraft(emptyDraft());
     await loadProducts();
