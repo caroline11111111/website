@@ -37,7 +37,7 @@ export const AccountPage:React.FC<AccountPageProps>=({onGoOrders})=>{
     const row=addressResult.data as AddressRow;
     setDefaultAddressId(row.id);setAddressLine1(row.address_line_1||'');setAddressLine2(row.address_line_2||'');
     setCity(row.city||'');setRegion(row.state_region||'');setPostalCode(row.postal_code||'');setCountryCode(row.country_code||'MY');
-   }
+   }else{setAddressLine1((user as typeof user & {address?:string}).address||'');}
   });
   return()=>{alive=false;};
  },[user?.id]);
