@@ -201,7 +201,7 @@ begin
   update public.business_calendar_meta
   set version=version+1,updated_at=now()
   where singleton=true;
-  return coalesce(new,old);
+  if tg_op='DELETE' then return old; else return new; end if;
 end;
 $function$;
 
@@ -300,6 +300,7 @@ begin
   if not found then raise exception 'Order for payment proof not found'; end if;
   v_deadline := app_private.business_deadline(new.created_at,3);
   v_version := app_private.business_calendar_version();
+  update public.payment_proofs set review_deadline_at=v_deadline where id=new.id;
 
   update public.orders
   set proof_review_deadline_at=v_deadline,
