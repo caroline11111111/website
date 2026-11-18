@@ -1,8 +1,8 @@
 import React,{useEffect,useState} from 'react';
 import {supabase} from '../lib/supabase';
 
-type BrandingSettingsValue={logo_path:string|null;home_label:string;shop_label:string;about_label:string;account_label:string;};
-const DEFAULT_VALUE:BrandingSettingsValue={logo_path:null,home_label:'Home',shop_label:'Shop',about_label:'About',account_label:'Account'};
+type BrandingSettingsValue={logo_path:string|null;home_label:string;shop_label:string;about_label:string;account_label:string;nav_font_family:string;};
+const DEFAULT_VALUE:BrandingSettingsValue={logo_path:null,home_label:'Home',shop_label:'Shop',about_label:'About',account_label:'Account',nav_font_family:'inherit'};
 
 export const BrandingSettings:React.FC=()=>{
  const[value,setValue]=useState<BrandingSettingsValue>(DEFAULT_VALUE);
@@ -63,6 +63,7 @@ export const BrandingSettings:React.FC=()=>{
    </div>
    <div className="border-t pt-4 space-y-3"><h3 className="font-medium">Navigation Labels</h3>
     {([['home_label','Home'],['shop_label','Shop'],['about_label','About'],['account_label','Account']] as const).map(([key,label])=><label key={key} className="grid gap-1 text-sm">{label}<input maxLength={32} value={value[key]} onChange={e=>update(key,e.target.value)} className="border rounded-lg p-2"/></label>)}
+    <label className="grid gap-1 text-sm">Navigation Font<select value={value.nav_font_family} onChange={e=>update('nav_font_family',e.target.value)} className="border rounded-lg p-2"><option value="inherit">Use Storefront Font</option><option value="Arial, sans-serif">Arial · Sans Serif</option><option value="Georgia, serif">Georgia · Serif</option><option value="Times New Roman, serif">Times New Roman · Serif</option><option value="system-ui, sans-serif">System UI · Sans Serif</option></select></label>
    </div>
    {error&&<p role="alert" className="text-sm text-red-600">{error}</p>}
    {message&&<p role="status" className="text-sm text-emerald-700">{message}</p>}
