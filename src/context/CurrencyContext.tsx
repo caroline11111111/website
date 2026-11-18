@@ -5,22 +5,22 @@ export interface StoreCurrency {
   code:string;
   name:string;
   symbol:string;
-  rateAgainstMYR:number;
+  decimalPlaces:number;
   isActive:boolean;
 }
 
 export const DEFAULT_CURRENCIES:StoreCurrency[]=[
-  {code:'MYR',name:'Malaysian Ringgit',symbol:'RM',rateAgainstMYR:1,isActive:true},
-  {code:'USD',name:'US Dollar',symbol:'$',rateAgainstMYR:0.22,isActive:true},
-  {code:'EUR',name:'Euro',symbol:'€',rateAgainstMYR:0.20,isActive:true},
-  {code:'SGD',name:'Singapore Dollar',symbol:'S$',rateAgainstMYR:0.30,isActive:true},
+  {code:'MYR',name:'Malaysian Ringgit',symbol:'RM',decimalPlaces:2,isActive:true},
+  {code:'SGD',name:'Singapore Dollar',symbol:'S$',decimalPlaces:2,isActive:true},
+  {code:'USD',name:'US Dollar',symbol:'$',decimalPlaces:2,isActive:true},
+  {code:'CNY',name:'Chinese Yuan',symbol:'¥',decimalPlaces:2,isActive:true},
 ];
 
 interface CurrencyContextValue {
   currencies:StoreCurrency[];
   defaultCurrency:string;
   loading:boolean;
-  formatPrice:(priceInMYR:number,currencyCode:string)=>string;
+  formatPrice:(amount:number,currencyCode:string)=>string;
 }
 const CurrencyContext=createContext<CurrencyContextValue|undefined>(undefined);
 
@@ -30,21 +30,11 @@ export const CurrencyProvider:React.FC<{children:React.ReactNode}>=({children})=
  const[loading,setLoading]=useState(true);
  useEffect(()=>{
   let alive=true;
-  supabase.from('site_settings').select('setting_value').eq('setting_key','storefront_currency_settings').maybeSingle().then(({data,error})=>{
+  supabase.from('store_currencies').select('code,name,symbol,decimal_places,is_active').order('display_order',{ascending:true}).then(({data,error})=>{
    if(!alive)return;
-   const rawValue=data?.setting_value;
-   if(!error&&rawValue&&typeof rawValue==='object'&&!Array.isArray(rawValue)){
-    const value=rawValue as {defaultCurrency?:string;currencies?:unknown};
-    // Database settings can be edited independently of the storefront. Validate the
-    // shape before mapping so malformed JSON cannot crash the entire customer app.
-    const sourceRows=Array.isArray(value.currencies)?value.currencies:[];
-    const rows=sourceRows.map((entry:unknown)=>{
-     const row=entry&&typeof entry==='object'?entry as Partial<StoreCurrency>:{};
-     return {code:String(row.code||'').toUpperCase(),name:String(row.name||row.code||''),symbol:String(row.symbol||row.code||''),rateAgainstMYR:Number(row.rateAgainstMYR),isActive:row.isActive!==false};
-    }).filter((row:StoreCurrency)=>/^[A-Z]{3}$/.test(row.code)&&Number.isFinite(row.rateAgainstMYR)&&row.rateAgainstMYR>0);
-    if(rows.some((row:StoreCurrency)=>row.code==='MYR'))setCurrencies(rows);
-    const selected=String(value.defaultCurrency||'MYR').toUpperCase();
-    if(rows.some((row:StoreCurrency)=>row.code===selected&&row.isActive))setDefaultCurrency(selected);
+   if(!error&&data){
+    const rows=data.map((row:any)=>({code:String(row.code||'').toUpperCase(),name:String(row.name||row.code||''),symbol:String(row.symbol||row.code||''),decimalPlaces:Number(row.decimal_places??2),isActive:row.is_active===true})).filter(row=>/^[A-Z]{3}$/.test(row.code)&&Number.isInteger(row.decimalPlaces)&&row.decimalPlaces>=0&&row.decimalPlaces<=4);
+    if(rows.some(row=>row.code==='MYR'))setCurrencies(rows);
    }
    setLoading(false);
   });
@@ -52,10 +42,12 @@ export const CurrencyProvider:React.FC<{children:React.ReactNode}>=({children})=
  },[]);
  const value=useMemo<CurrencyContextValue>(()=>({
   currencies,defaultCurrency,loading,
-  formatPrice:(priceInMYR,currencyCode)=>{
-   const currency=currencies.find(row=>row.code===currencyCode&&row.isActive)||currencies.find(row=>row.code==='MYR')||DEFAULT_CURRENCIES[0];
-   const converted=priceInMYR*currency.rateAgainstMYR;
-   return `${currency.symbol} ${converted.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+  formatPrice:(amount,currencyCode)=>{
+   const currency=currencies.find(row=>row.code===currencyCode&&row.isActive);
+   if(!currency||!Number.isFinite(amount))return 'Price unavailable';
+   // Amounts passed to this formatter must already be denominated in currencyCode.
+   // Never convert a MYR amount and present it as another currency.
+   return `${currency.symbol} ${amount.toLocaleString(undefined,{minimumFractionDigits:currency.decimalPlaces,maximumFractionDigits:currency.decimalPlaces})}`;
   }
  }),[currencies,defaultCurrency,loading]);
  return <CurrencyContext.Provider value={value}>{children}</CurrencyContext.Provider>;
