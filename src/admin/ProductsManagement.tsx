@@ -256,7 +256,7 @@ export function ProductsManagement({ can }: { can: (permission: string) => boole
       upsert: false,
     });
     if (uploadError) {
-      setError(`Image upload failed: ${uploadError.message}. Confirm that the private product-images bucket and its Admin upload policy exist.`);
+      setError(`Image upload failed: ${uploadError.message}. Confirm that the product-images bucket and its Admin upload policy exist.`);
       return;
     }
     const { error: insertError } = await supabase.from('product_images').insert({
