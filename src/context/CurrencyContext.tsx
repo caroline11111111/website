@@ -32,12 +32,19 @@ export const CurrencyProvider:React.FC<{children:React.ReactNode}>=({children})=
   let alive=true;
   supabase.from('site_settings').select('setting_value').eq('setting_key','storefront_currency_settings').maybeSingle().then(({data,error})=>{
    if(!alive)return;
-   if(!error&&data?.setting_value){
-    const value=data.setting_value as {defaultCurrency?:string;currencies?:Array<Partial<StoreCurrency>>};
-    const rows=(value.currencies||[]).map(row=>({code:String(row.code||'').toUpperCase(),name:String(row.name||row.code||''),symbol:String(row.symbol||row.code||''),rateAgainstMYR:Number(row.rateAgainstMYR),isActive:row.isActive!==false})).filter(row=>/^[A-Z]{3}$/.test(row.code)&&Number.isFinite(row.rateAgainstMYR)&&row.rateAgainstMYR>0);
-    if(rows.some(row=>row.code==='MYR'))setCurrencies(rows);
+   const rawValue=data?.setting_value;
+   if(!error&&rawValue&&typeof rawValue==='object'&&!Array.isArray(rawValue)){
+    const value=rawValue as {defaultCurrency?:string;currencies?:unknown};
+    // Database settings can be edited independently of the storefront. Validate the
+    // shape before mapping so malformed JSON cannot crash the entire customer app.
+    const sourceRows=Array.isArray(value.currencies)?value.currencies:[];
+    const rows=sourceRows.map((entry:unknown)=>{
+     const row=entry&&typeof entry==='object'?entry as Partial<StoreCurrency>:{};
+     return {code:String(row.code||'').toUpperCase(),name:String(row.name||row.code||''),symbol:String(row.symbol||row.code||''),rateAgainstMYR:Number(row.rateAgainstMYR),isActive:row.isActive!==false};
+    }).filter((row:StoreCurrency)=>/^[A-Z]{3}$/.test(row.code)&&Number.isFinite(row.rateAgainstMYR)&&row.rateAgainstMYR>0);
+    if(rows.some((row:StoreCurrency)=>row.code==='MYR'))setCurrencies(rows);
     const selected=String(value.defaultCurrency||'MYR').toUpperCase();
-    if(rows.some(row=>row.code===selected&&row.isActive))setDefaultCurrency(selected);
+    if(rows.some((row:StoreCurrency)=>row.code===selected&&row.isActive))setDefaultCurrency(selected);
    }
    setLoading(false);
   });
