@@ -34,7 +34,7 @@ export const CurrencyProvider:React.FC<{children:React.ReactNode}>=({children})=
    if(!alive)return;
    if(!error&&data){
     const rows=data.map((row:any)=>({code:String(row.code||'').toUpperCase(),name:String(row.name||row.code||''),symbol:String(row.symbol||row.code||''),decimalPlaces:Number(row.decimal_places??2),isActive:row.is_active===true})).filter(row=>/^[A-Z]{3}$/.test(row.code)&&Number.isInteger(row.decimalPlaces)&&row.decimalPlaces>=0&&row.decimalPlaces<=4);
-    if(rows.some(row=>row.code==='MYR'))setCurrencies(rows);
+    if(rows.some(row=>row.code==='MYR')){setCurrencies(rows);const selected=String((defaultRow?.setting_value as any)?.code||'MYR').toUpperCase();if(rows.some(row=>row.code===selected&&row.isActive))setDefaultCurrency(selected);}
    }
    setLoading(false);
   });
