@@ -45,8 +45,8 @@ export const AccountPage:React.FC<AccountPageProps>=({onGoOrders})=>{
  const save=async(e:React.FormEvent)=>{
   e.preventDefault();if(!user)return;
   const hasAddress=[addressLine1,addressLine2,city,region,postalCode].some(value=>value.trim()!=='');
-  if(hasAddress&&(!addressLine1.trim()||!city.trim()||!/^[A-Z]{2}$/.test(countryCode.trim().toUpperCase()))){
-   setError('Please enter Address Line 1, City and a valid two-letter Country Code before saving your delivery address.');return;
+  if(hasAddress&&(!addressLine1.trim()||!city.trim()||!name.trim()||!phone.trim()||!/^[A-Z]{2}$/.test(countryCode.trim().toUpperCase()))){
+   setError('Please enter your name, phone number, Address Line 1, City and a valid two-letter Country Code before saving your delivery address.');return;
   }
   setBusy(true);setMessage('');setError('');
   const[{error:profileError},{error:authError}]=await Promise.all([
