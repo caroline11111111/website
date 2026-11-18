@@ -30,7 +30,7 @@ export const CurrencyProvider:React.FC<{children:React.ReactNode}>=({children})=
  const[loading,setLoading]=useState(true);
  useEffect(()=>{
   let alive=true;
-  supabase.from('store_currencies').select('code,name,symbol,decimal_places,is_active').order('display_order',{ascending:true}).then(({data,error})=>{
+  Promise.all([supabase.from('store_currencies').select('code,name,symbol,decimal_places,is_active').order('display_order',{ascending:true}),supabase.from('site_settings').select('setting_value').eq('setting_key','storefront_default_currency').maybeSingle()]).then(([{data,error},{data:defaultRow}])=>{
    if(!alive)return;
    if(!error&&data){
     const rows=data.map((row:any)=>({code:String(row.code||'').toUpperCase(),name:String(row.name||row.code||''),symbol:String(row.symbol||row.code||''),decimalPlaces:Number(row.decimal_places??2),isActive:row.is_active===true})).filter(row=>/^[A-Z]{3}$/.test(row.code)&&Number.isInteger(row.decimalPlaces)&&row.decimalPlaces>=0&&row.decimalPlaces<=4);
