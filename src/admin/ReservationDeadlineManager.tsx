@@ -4,7 +4,7 @@ import {supabase} from '../lib/supabase';
 type Reservation={id:string;order_id:string;quantity:number;status:string;reserved_at:string;original_deadline_at:string|null;current_deadline_at:string|null;deadline_stage:string|null;deadline_calendar_version:number|null;orders?:any;products?:any;product_variants?:any;};
 type History={id:string;order_id:string;event_type:string;deadline_stage:string|null;old_deadline_at:string|null;new_deadline_at:string|null;reason:string|null;created_at:string;orders?:any;};
 const fmt=(value:string|null|undefined)=>value?new Intl.DateTimeFormat('en-MY',{dateStyle:'medium',timeStyle:'short',timeZone:'Asia/Kuala_Lumpur'}).format(new Date(value)):'—';
-export const ReservationDeadlineManager:React.FC<{canExtend:boolean}>={({canExtend})=>{
+export const ReservationDeadlineManager:React.FC<{canExtend:boolean}> = ({canExtend}) => {
  const[rows,setRows]=useState<Reservation[]>([]);const[history,setHistory]=useState<History[]>([]);
  const[dates,setDates]=useState<Record<string,string>>({});const[busyId,setBusyId]=useState<string|null>(null);const[error,setError]=useState('');const[message,setMessage]=useState('');
  const load=async()=>{
