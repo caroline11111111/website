@@ -64,7 +64,7 @@ export const Slideshow: React.FC = () => {
 
   return (
     <div id="H007" className="w-full max-w-5xl mx-auto my-12 px-4">
-      <div className="relative h-64 md:h-[450px] rounded-lg overflow-hidden shadow-md">
+      <div id="H008" className="relative aspect-square w-full rounded-lg overflow-hidden shadow-md">
         {activeSlides.map((slide, index) => (
           <div
             key={slide.id}
@@ -101,7 +101,7 @@ export const Slideshow: React.FC = () => {
       </div>
 
       {showControls && (
-        <div className="mt-4 flex items-center justify-center gap-2.5" aria-label="Choose slide">
+        <div id="H009" className="mt-4 flex items-center justify-center gap-2.5" aria-label="Choose slide">
           {activeSlides.map((slide, index) => (
             <button
               key={slide.id}
