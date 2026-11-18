@@ -289,7 +289,11 @@ export function ProductsManagement({ can }: { can: (permission: string) => boole
       is_primary: images.length === 0,
     });
     if (insertError) {
-      setError(`Image uploaded but its product record could not be saved: ${insertError.message}. The file may need cleanup by an authorized administrator.`);
+      // Avoid leaving an unreferenced object behind when the database insert is rejected.
+      const { error: cleanupError } = await supabase.storage.from('product-images').remove([path]);
+      setError(cleanupError
+        ? `Image record could not be saved: ${insertError.message}. Automatic file cleanup also failed: ${cleanupError.message}. An authorized administrator may need to remove the orphaned file.`
+        : `Image record could not be saved: ${insertError.message}. The uploaded file was cleaned up automatically.`);
       return;
     }
     setNotice('Product image uploaded.');
