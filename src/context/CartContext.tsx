@@ -1,7 +1,7 @@
 import React,{createContext,useCallback,useContext,useEffect,useMemo,useState} from 'react';
 import {useAuth} from './AuthContext';
 import {supabase} from '../lib/supabase';
-export interface CartItem{id:string;productId:string;variantId?:string|null;name:string;brand:string;priceMYR:number;imageUrl:string;quantity:number;}
+export interface CartItem{id:string;productId:string;variantId?:string|null;name:string;brand:string;priceMYR:number;pricesByCurrency:Record<string,number>;imageUrl:string;quantity:number;}
 interface CartContextType{items:CartItem[];addToCart:(item:Omit<CartItem,'quantity'>)=>Promise<void>;removeFromCart:(id:string)=>Promise<void>;clearCart:()=>Promise<void>;totalItemsCount:number;loading:boolean;refresh:()=>Promise<void>;}
 const CartContext=createContext<CartContextType|undefined>(undefined);
 export const CartProvider:React.FC<{children:React.ReactNode}>=({children})=>{
@@ -14,13 +14,16 @@ export const CartProvider:React.FC<{children:React.ReactNode}>=({children})=>{
    if(idError)throw idError;setCartId(id as string);
    const{data,error}=await supabase.from('cart_items').select('id,product_id,variant_id,quantity,products(name,price_myr,brands(name),product_images(storage_path,display_order,is_primary)),product_variants(variant_name,variant_value,price_myr)').eq('cart_id',id);
    if(error)throw error;
-   const mapped=(data||[]).map((row:any)=>{
+   const mapped=await Promise.all((data||[]).map(async(row:any)=>{
     const product=row.products||{};const variant=row.product_variants;
     const pics=product.product_images||[];const primary=pics.find((p:any)=>p.is_primary)||pics.sort((a:any,b:any)=>a.display_order-b.display_order)[0];
     const path=primary?.storage_path;
     const image=path?supabase.storage.from('product-images').getPublicUrl(path).data.publicUrl:'';
-    return{id:row.id,productId:row.product_id,variantId:row.variant_id,name:product.name+(variant?' · '+variant.variant_name+': '+variant.variant_value:''),brand:product.brands?.name||'',priceMYR:Number(variant?.price_myr??product.price_myr??0),imageUrl:image,quantity:row.quantity};
-   });
+    const priceTable=variant?'variant_currency_prices':'product_currency_prices';const idColumn=variant?'variant_id':'product_id';
+    const{data:priceRows}=await supabase.from(priceTable).select('currency_code,price').eq(idColumn,variant?.id||row.product_id);
+    const pricesByCurrency:Record<string,number>={};(priceRows||[]).forEach((p:any)=>{pricesByCurrency[String(p.currency_code).toUpperCase()]=Number(p.price);});
+    return{id:row.id,productId:row.product_id,variantId:row.variant_id,name:product.name+(variant?' · '+variant.variant_name+': '+variant.variant_value:''),brand:product.brands?.name||'',priceMYR:Number(variant?.price_myr??product.price_myr??0),pricesByCurrency,imageUrl:image,quantity:row.quantity};
+   }));
    setItems(mapped);
   }catch(error){console.error('Cart load failed',error);setItems([]);}
   finally{setLoading(false);}
