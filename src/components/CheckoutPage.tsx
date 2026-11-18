@@ -40,18 +40,19 @@ export const CheckoutPage:React.FC<CheckoutPageProps>=({selectedCurrency,selecte
  const[file,setFile]=useState<File|null>(null);const[busy,setBusy]=useState(false);const[error,setError]=useState('');
  const[uploadedProofPath,setUploadedProofPath]=useState<string|null>(null);
  const[idempotencyKey,setIdempotencyKey]=useState<string|null>(null);
- const[quote,setQuote]=useState<any>(null);const[quoteError,setQuoteError]=useState('');
+ const[quote,setQuote]=useState<any>(null);const[quoteError,setQuoteError]=useState('');const[paymentInstruction,setPaymentInstruction]=useState<any>(null);
  const selected=useMemo(()=>items.filter(i=>selectedItemIds.includes(i.id)),[items,selectedItemIds]);
- const subtotal=selected.reduce((sum,i)=>sum+i.priceMYR*i.quantity,0);
+ const hasAllPrices=selected.every(i=>Number.isFinite(i.pricesByCurrency?.[selectedCurrency]));const subtotal=selected.reduce((sum,i)=>sum+(i.pricesByCurrency?.[selectedCurrency]||0)*i.quantity,0);
  useEffect(()=>{let alive=true;if(!user||!selectedItemIds.length){setQuote(null);setQuoteError('');return;}
-  supabase.rpc('quote_shipping',{p_cart_item_ids:selectedItemIds,p_country_code:country,p_region_code:region||null}).then(({data,error})=>{if(!alive)return;if(error){setQuote(null);setQuoteError(error.message);}else{setQuote(data);setQuoteError('');}});
+  supabase.rpc('quote_shipping_currency',{p_cart_item_ids:selectedItemIds,p_country_code:country,p_region_code:region||null,p_currency_code:selectedCurrency}).then(({data,error})=>{if(!alive)return;if(error){setQuote(null);setQuoteError(error.message);}else{setQuote(data);setQuoteError('');}});
   return()=>{alive=false;};
- },[user,selectedItemIds.join(','),country,region]);
+ },[user,selectedItemIds.join(','),country,region,selectedCurrency]);
+ useEffect(()=>{let alive=true;setPaymentInstruction(null);supabase.from('currency_payment_instructions').select('currency_code,bank_name,account_name,account_number,payment_instructions,is_active').eq('currency_code',selectedCurrency).eq('is_active',true).maybeSingle().then(({data,error})=>{if(!alive)return;if(error){setQuoteError(error.message);return;}setPaymentInstruction(data||null);});return()=>{alive=false;};},[selectedCurrency]);
  useEffect(()=>{if(!user)return;supabase.from('customer_addresses').select('*').eq('user_id',user.id).eq('is_default',true).maybeSingle().then(({data})=>{if(data){setRecipientName(data.recipient_name);setPhone(data.phone);setLine1(data.address_line_1);setLine2(data.address_line_2||'');setCity(data.city);setRegion((data.country_code||'').toUpperCase()==='MY'?normalizeMalaysiaRegion(data.state_region||''):(data.state_region||''));setPostal(data.postal_code||'');setCountry(data.country_code);}});},[user]);
  const submit=async(e:React.FormEvent)=>{
   e.preventDefault();setError('');
-  if(!user){setError('Please sign in before checkout.');return;}if(selectedCurrency!=='MYR'){setError('Checkout for this currency is not available yet. Independent product, shipping and payment instructions must be configured first. Please switch to MYR or contact support.');return;}if(!selected.length){setError('Please return to your bag and select items.');return;}
-  if(!quote){setError(quoteError||'Please wait for a valid shipping quote before submitting.');return;}
+  if(!user){setError('Please sign in before checkout.');return;}if(!selected.length){setError('Please return to your bag and select items.');return;}
+  if(!hasAllPrices){setError(`One or more selected items do not have a ${selectedCurrency} price configured.`);return;}if(!quote){setError(quoteError||'Please wait for a valid shipping quote before submitting.');return;}if(!paymentInstruction){setError(`Payment instructions for ${selectedCurrency} are not configured yet. Please contact support.`);return;}
   if(!file){setError('Please upload your payment proof before placing the order.');return;}
   if(file.size>5242880){setError('Payment proof must not exceed 5MB.');return;}
   if(!['image/jpeg','image/png','application/pdf'].includes(file.type)){setError('Only JPG, PNG, or PDF files are accepted.');return;}
@@ -67,11 +68,11 @@ export const CheckoutPage:React.FC<CheckoutPageProps>=({selectedCurrency,selecte
    }
    const requestKey=idempotencyKey||crypto.randomUUID();
    if(!idempotencyKey)setIdempotencyKey(requestKey);
-   const{error:submitError}=await supabase.rpc('submit_order_confirmed',{
+   const{error:submitError}=await supabase.rpc('submit_order_confirmed_currency',{
     p_cart_item_ids:selectedItemIds,p_recipient_name:recipientName,p_recipient_phone:phone,
     p_shipping_address:{address_line_1:line1,address_line_2:line2,city,region_code:region,postal_code:postal,country_code:country},
     p_payment_proof_path:proofPathForAttempt,p_original_filename:file.name,p_mime_type:file.type,p_file_size:file.size,
-    p_expected_subtotal_myr:Number(quote.subtotal_myr),p_expected_shipping_fee_myr:Number(quote.shipping_fee_myr),
+    p_currency_code:selectedCurrency,p_expected_subtotal:Number(quote.subtotal),p_expected_shipping_fee:Number(quote.shipping_fee),
     p_idempotency_key:requestKey
    });
    if(submitError)throw submitError;
@@ -97,17 +98,18 @@ export const CheckoutPage:React.FC<CheckoutPageProps>=({selectedCurrency,selecte
     <label className="block text-sm">Country Code<input required maxLength={2} value={country} onChange={e=>setCountry(e.target.value.toUpperCase())} className="mt-1 w-full border rounded p-3"/></label>
    </div>
   </section>
+  <section className="space-y-3 border-t pt-5"><h2 className="font-semibold">Bank Transfer Details · {selectedCurrency}</h2>{paymentInstruction?<div className="rounded-lg bg-gray-50 border p-4 text-sm space-y-1"><p><strong>Bank:</strong> {paymentInstruction.bank_name||'—'}</p><p><strong>Account Name:</strong> {paymentInstruction.account_name||'—'}</p><p><strong>Account Number:</strong> {paymentInstruction.account_number||'—'}</p>{paymentInstruction.payment_instructions&&<p className="whitespace-pre-wrap">{paymentInstruction.payment_instructions}</p>}</div>:<p className="text-sm text-amber-700">Receiving account details for {selectedCurrency} have not been configured. Checkout is unavailable until Admin adds them.</p>}</section>
   <section className="space-y-3 border-t pt-5"><h2 className="font-semibold">Payment Proof</h2><p className="text-xs text-gray-500">Upload your payment receipt (JPG, PNG, or PDF; maximum 5MB). Uploading a receipt does not confirm payment. Our team will review it manually.</p><input type="file" required accept="image/jpeg,image/png,application/pdf" onChange={e=>{setFile(e.target.files?.[0]||null);setUploadedProofPath(null);setIdempotencyKey(null);setError('');}} className="block w-full text-sm"/>{uploadedProofPath&&<p className="text-xs text-green-700">Payment receipt uploaded and retained for this checkout attempt. It will not be uploaded again when you retry.</p>}</section>
   <section className="border-t pt-5 space-y-3"><h2 className="font-semibold">Selected Items</h2>
-   {selected.map(i=><div key={i.id} className="flex justify-between text-sm"><span>{i.name} × {i.quantity}</span><span>{formatPrice(i.priceMYR*i.quantity,selectedCurrency)}</span></div>)}
-   <div className="border-t pt-3 flex justify-between font-semibold"><span>Subtotal</span><span>{quote?formatPrice(Number(quote.subtotal_myr),selectedCurrency):formatPrice(subtotal,selectedCurrency)}</span></div>
-   <div className="flex justify-between text-sm"><span>Shipping</span><span>{quote?formatPrice(Number(quote.shipping_fee_myr),selectedCurrency):'—'}</span></div>
-   <div className="flex justify-between font-bold text-lg"><span>Total</span><span>{quote?formatPrice(Number(quote.total_myr),selectedCurrency):'—'}</span></div>
+   {selected.map(i=><div key={i.id} className="flex justify-between text-sm"><span>{i.name} × {i.quantity}</span><span>{Number.isFinite(i.pricesByCurrency?.[selectedCurrency])?formatPrice(i.pricesByCurrency[selectedCurrency]*i.quantity,selectedCurrency):'Price not configured'}</span></div>)}
+   <div className="border-t pt-3 flex justify-between font-semibold"><span>Subtotal</span><span>{quote?formatPrice(Number(quote.subtotal),selectedCurrency):hasAllPrices?formatPrice(subtotal,selectedCurrency):'Price not configured'}</span></div>
+   <div className="flex justify-between text-sm"><span>Shipping</span><span>{quote?formatPrice(Number(quote.shipping_fee),selectedCurrency):'—'}</span></div>
+   <div className="flex justify-between font-bold text-lg"><span>Total</span><span>{quote?formatPrice(Number(quote.total),selectedCurrency):'—'}</span></div>
    {quoteError&&<p className="text-xs text-red-600">{quoteError}</p>}
    <p className="text-xs text-gray-500">If the price or shipping changes, you will need to review the updated quote and confirm again.</p>
   </section>
-  {selectedCurrency!=='MYR'&&<p role="status" className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded p-3">{selectedCurrency} checkout is temporarily unavailable while independent prices, shipping fees and payment instructions are being connected. No currency conversion will be used.</p>}{error&&<p role="alert" className="text-sm text-red-600">{error}</p>}
-  <button type="submit" disabled={busy||!selected.length||!quote||selectedCurrency!=='MYR'} className="w-full py-4 bg-black text-white rounded-full disabled:opacity-50">{busy?'Submitting Order…':'Submit Order with Payment Proof'}</button>
+  {!hasAllPrices&&<p role="status" className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded p-3">One or more selected products do not yet have a {selectedCurrency} price. No currency conversion will be used.</p>}{error&&<p role="alert" className="text-sm text-red-600">{error}</p>}
+  <button type="submit" disabled={busy||!selected.length||!hasAllPrices||!quote||!paymentInstruction} className="w-full py-4 bg-black text-white rounded-full disabled:opacity-50">{busy?'Submitting Order…':'Submit Order with Payment Proof'}</button>
  </form></div>;
 };
 export default CheckoutPage;
