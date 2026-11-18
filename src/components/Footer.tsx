@@ -1,6 +1,7 @@
 import React from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { useCurrency } from '../context/CurrencyContext';
+import {useTheme,themeToCssVars} from '../context/ThemeContext';
 
 interface FooterProps {
   selectedCurrency: string;
@@ -10,9 +11,10 @@ interface FooterProps {
 export const Footer: React.FC<FooterProps> = ({ selectedCurrency, onCurrencyChange }) => {
   const { language: lang, setLanguage: setLang } = useLanguage();
   const { currencies } = useCurrency();
+  const { currentTheme } = useTheme();
 
   return (
-    <footer className="w-full bg-gray-100 text-gray-700 py-8 px-6 mt-auto border-t border-gray-200 text-sm">
+    <footer className="w-full py-8 px-6 mt-auto border-t text-sm" style={{...themeToCssVars(currentTheme),backgroundColor:"var(--theme-surface)",color:"var(--theme-text-primary)",borderColor:"var(--theme-border)"}}>
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
         {/* 语言切换器 */}
         <div className="flex items-center space-x-4">
