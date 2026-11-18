@@ -14,7 +14,7 @@ import { CheckoutPage } from './components/CheckoutPage';
 import { AccountPage } from './components/AccountPage';
 import { MyOrderPage } from './components/MyOrderPage'; // 修改点 1：引入正确的 MyOrderPage
 import { LoginPage } from './components/LoginPage';
-import { SignUpPage } from './components/SignUpPage';
+import { RegisterPage } from './components/RegisterPage';
 
 export function App() {
   // 页面导航状态
@@ -45,7 +45,7 @@ export function App() {
               onClick={() => setCurrentTab('home')}
               className="text-lg font-light tracking-widest uppercase cursor-pointer"
             >
-              CCC Luxury
+              Luxury Store
             </button>
             <nav className="hidden md:flex space-x-6 text-xs uppercase tracking-wider font-medium">
               <button onClick={() => setCurrentTab('home')} className={`hover:text-black transition-colors ${currentTab === 'home' ? 'text-black font-bold' : 'text-gray-500'}`}>Home</button>
@@ -167,22 +167,22 @@ export function App() {
 
         {currentTab === 'login' && (
           <LoginPage
-            onSuccess={() => setCurrentTab('account')}
-            onGoSignUp={() => setCurrentTab('signup')}
+            onLoginSuccess={() => setCurrentTab('account')}
+            onNavigateRegister={() => setCurrentTab('signup')}
           />
         )}
 
         {currentTab === 'signup' && (
-          <SignUpPage
-            onSuccess={() => setCurrentTab('account')}
-            onGoLogin={() => setCurrentTab('login')}
+          <RegisterPage
+            onRegisterSuccess={() => setCurrentTab('account')}
+            onNavigateLogin={() => setCurrentTab('login')}
           />
         )}
       </main>
 
       {/* 底部版权栏 */}
       <footer className="bg-white border-t border-gray-200 py-8 text-center text-xs text-gray-500 uppercase tracking-widest">
-        &copy; {new Date().getFullYear()} CCC Luxury Platform. All Rights Reserved.
+        &copy; {new Date().getFullYear()} Luxury Store. All Rights Reserved.
       </footer>
     </div>
   );
