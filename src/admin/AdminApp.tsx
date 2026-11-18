@@ -88,7 +88,7 @@ export function AdminApp(){
    supabase.from('site_settings').select('setting_value').eq('setting_key','storefront_default_currency').maybeSingle()
   ]);
   if(error){setError(error.message);return;}if(defaultError){setError(defaultError.message);return;}
-  if(data){setCurrencyRows(data.map((row:any)=>({code:String(row.code).toUpperCase(),name:String(row.name||''),symbol:String(row.symbol||''),decimalPlaces:Number(row.decimal_places??2),isActive:row.is_active===true})));}const{data:instructionRows,instructionsError}=await supabase.from('currency_payment_instructions').select('currency_code,bank_name,account_name,account_number,payment_instructions,is_active');if(instructionsError){setError(instructionsError.message);return;}const instructionMap:Record<string,any>={};(instructionRows||[]).forEach((row:any)=>{instructionMap[row.currency_code]=row;});setPaymentInstructions(instructionMap);
+  if(data){setCurrencyRows(data.map((row:any)=>({code:String(row.code).toUpperCase(),name:String(row.name||''),symbol:String(row.symbol||''),decimalPlaces:Number(row.decimal_places??2),isActive:row.is_active===true})));}const{data:instructionRows,error:instructionsError}=await supabase.from('currency_payment_instructions').select('currency_code,bank_name,account_name,account_number,payment_instructions,is_active');if(instructionsError){setError(instructionsError.message);return;}const instructionMap:Record<string,any>={};(instructionRows||[]).forEach((row:any)=>{instructionMap[row.currency_code]=row;});setPaymentInstructions(instructionMap);
   const selected=String((defaultRow?.setting_value as any)?.code||'MYR').toUpperCase();
   if((data||[]).some((row:any)=>row.code===selected&&row.is_active))setDefaultCurrency(selected);
  };
