@@ -183,6 +183,10 @@ export function ProductsManagement({ can }: { can: (permission: string) => boole
       setError('Please check the product name, SKU, price, stock and weight.');
       return;
     }
+    if (!editingId && draft.inventory_mode === 'single_item' && stock > 1) {
+      setError('Single-item products can only have an initial stock quantity of 0 or 1. Choose Multiple units for larger stock.');
+      return;
+    }
     const payload = {
       name: draft.name.trim(),
       sku: draft.sku.trim(),
