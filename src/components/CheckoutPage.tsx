@@ -50,7 +50,7 @@ export const CheckoutPage:React.FC<CheckoutPageProps>=({selectedCurrency,selecte
  useEffect(()=>{if(!user)return;supabase.from('customer_addresses').select('*').eq('user_id',user.id).eq('is_default',true).maybeSingle().then(({data})=>{if(data){setRecipientName(data.recipient_name);setPhone(data.phone);setLine1(data.address_line_1);setLine2(data.address_line_2||'');setCity(data.city);setRegion((data.country_code||'').toUpperCase()==='MY'?normalizeMalaysiaRegion(data.state_region||''):(data.state_region||''));setPostal(data.postal_code||'');setCountry(data.country_code);}});},[user]);
  const submit=async(e:React.FormEvent)=>{
   e.preventDefault();setError('');
-  if(!user){setError('Please sign in before checkout.');return;}if(!selected.length){setError('Please return to your bag and select items.');return;}
+  if(!user){setError('Please sign in before checkout.');return;}if(selectedCurrency!=='MYR'){setError('Checkout for this currency is not available yet. Independent product, shipping and payment instructions must be configured first. Please switch to MYR or contact support.');return;}if(!selected.length){setError('Please return to your bag and select items.');return;}
   if(!quote){setError(quoteError||'Please wait for a valid shipping quote before submitting.');return;}
   if(!file){setError('Please upload your payment proof before placing the order.');return;}
   if(file.size>5242880){setError('Payment proof must not exceed 5MB.');return;}
@@ -106,8 +106,8 @@ export const CheckoutPage:React.FC<CheckoutPageProps>=({selectedCurrency,selecte
    {quoteError&&<p className="text-xs text-red-600">{quoteError}</p>}
    <p className="text-xs text-gray-500">If the price or shipping changes, you will need to review the updated quote and confirm again.</p>
   </section>
-  {error&&<p role="alert" className="text-sm text-red-600">{error}</p>}
-  <button type="submit" disabled={busy||!selected.length||!quote} className="w-full py-4 bg-black text-white rounded-full disabled:opacity-50">{busy?'Submitting Order…':'Submit Order with Payment Proof'}</button>
+  {selectedCurrency!=='MYR'&&<p role="status" className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded p-3">{selectedCurrency} checkout is temporarily unavailable while independent prices, shipping fees and payment instructions are being connected. No currency conversion will be used.</p>}{error&&<p role="alert" className="text-sm text-red-600">{error}</p>}
+  <button type="submit" disabled={busy||!selected.length||!quote||selectedCurrency!=='MYR'} className="w-full py-4 bg-black text-white rounded-full disabled:opacity-50">{busy?'Submitting Order…':'Submit Order with Payment Proof'}</button>
  </form></div>;
 };
 export default CheckoutPage;
