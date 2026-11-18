@@ -192,7 +192,6 @@ export function ProductsManagement({ can }: { can: (permission: string) => boole
       condition: draft.condition.trim() || null,
       color: draft.color.trim() || null,
       description: draft.description.trim() || null,
-      stock_quantity: stock,
       weight_grams: weight,
       inventory_mode: draft.inventory_mode,
       sold_out_display: draft.sold_out_display,
@@ -201,7 +200,7 @@ export function ProductsManagement({ can }: { can: (permission: string) => boole
     setSaving(true);
     const result = editingId
       ? await supabase.from('products').update(payload).eq('id', editingId).select('id').single()
-      : await supabase.from('products').insert({ ...payload, is_published: false }).select('id').single();
+      : await supabase.from('products').insert({ ...payload, stock_quantity: stock, is_published: false }).select('id').single();
     setSaving(false);
     if (result.error) {
       setError(result.error.message);
@@ -336,7 +335,7 @@ export function ProductsManagement({ can }: { can: (permission: string) => boole
             <label className={labelClass}>Category<select className={inputClass} value={draft.category_id} onChange={(e) => setField('category_id', e.target.value)}><option value="">Select category</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label>
             <label className={labelClass}>Condition<input className={inputClass} value={draft.condition} onChange={(e) => setField('condition', e.target.value)} placeholder="e.g. Excellent" /></label>
             <label className={labelClass}>Color<input className={inputClass} value={draft.color} onChange={(e) => setField('color', e.target.value)} /></label>
-            <label className={labelClass}>Stock quantity<input className={inputClass} required type="number" min="0" step="1" value={draft.stock_quantity} onChange={(e) => setField('stock_quantity', e.target.value)} /></label>
+            <label className={labelClass}>Stock quantity<input className={inputClass} required type="number" min="0" step="1" value={draft.stock_quantity} onChange={(e) => setField('stock_quantity', e.target.value)} readOnly={!!editingId} />{editingId && <span className="text-xs font-normal text-slate-500">Use Inventory to adjust existing stock so every change is recorded.</span>}</label>
             <label className={labelClass}>Weight (grams)<input className={inputClass} required type="number" min="0" step="1" value={draft.weight_grams} onChange={(e) => setField('weight_grams', e.target.value)} /></label>
             <label className={labelClass}>Inventory mode<select className={inputClass} value={draft.inventory_mode} onChange={(e) => setField('inventory_mode', e.target.value as Draft['inventory_mode'])}><option value="single_item">Single item</option><option value="multiple">Multiple units</option></select></label>
             <label className={labelClass}>Sold-out display<select className={inputClass} value={draft.sold_out_display} onChange={(e) => setField('sold_out_display', e.target.value as Draft['sold_out_display'])}><option value="show">Show sold-out product</option><option value="hide">Hide sold-out product</option></select></label>
