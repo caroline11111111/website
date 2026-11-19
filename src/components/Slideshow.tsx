@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { siteImages } from '../config/siteConfig';
 import { SiteImage } from './SiteImage';
 import { supabase } from '../lib/supabase';
 
@@ -9,9 +8,7 @@ type Slide = { id: string; url: string; alt: string };
 
 export const Slideshow: React.FC = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [slides, setSlides] = useState<Slide[]>(
-    siteImages.slideshow.map((slide) => ({ id: slide.id, url: slide.url, alt: 'Featured slide' }))
-  );
+  const [slides, setSlides] = useState<Slide[]>([]);
 
   useEffect(() => {
     let alive = true;
@@ -23,7 +20,7 @@ export const Slideshow: React.FC = () => {
       .order('display_order')
       .order('created_at')
       .then(({ data, error }) => {
-        if (!alive || error || !data || data.length === 0) return;
+        if (!alive || error || !data) return;
 
         setSlides(
           (data as SlideData[]).map((slide) => ({
@@ -50,9 +47,7 @@ export const Slideshow: React.FC = () => {
     return () => window.clearInterval(timer);
   }, [slides.length]);
 
-  const activeSlides = slides.length
-    ? slides
-    : [{ id: 'fallback', url: siteImages.desktopBanner.url, alt: 'Featured collection' }];
+  const activeSlides = slides;
 
   const showControls = activeSlides.length > 1;
   const goToPrevious = () => {
@@ -64,7 +59,7 @@ export const Slideshow: React.FC = () => {
 
   return (
     <div id="H007" className="w-full max-w-5xl mx-auto my-12 px-4">
-      <div id="H008" className="relative aspect-square w-full rounded-lg overflow-hidden shadow-md">
+      <div id="H008" className="relative aspect-square w-full rounded-lg overflow-hidden bg-transparent">
         {activeSlides.map((slide, index) => (
           <div
             key={slide.id}
