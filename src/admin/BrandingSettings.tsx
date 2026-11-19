@@ -25,6 +25,12 @@ export const BrandingSettings:React.FC=()=>{
   if(!file){setPreview('');return;}
   const url=URL.createObjectURL(file);setPreview(url);return()=>URL.revokeObjectURL(url);
  },[file]);
+ const removeLogo=()=>{
+  setFile(null);
+  setValue(current=>({...current,logo_path:null}));
+  setError('');
+  setMessage('Logo removal selected. Click Save Branding Settings to apply it.');
+ };
  const save=async()=>{
   if(!value.home_label.trim()||!value.shop_label.trim()||!value.about_label.trim()||!value.account_label.trim()){
    setError('All four navigation labels are required.');return;
@@ -49,7 +55,7 @@ export const BrandingSettings:React.FC=()=>{
    updated_at:new Date().toISOString()
   },{onConflict:'setting_key'});
   if(saveError){setError(saveError.message);setBusy(false);return;}
-  setValue(current=>({...current,logo_path:logoPath}));setFile(null);setMessage('Logo and navigation labels saved.');
+  setValue(current=>({...current,logo_path:logoPath}));setFile(null);setMessage(logoPath?'Logo and navigation labels saved.':'Logo removed and navigation labels saved.');
   setBusy(false);
  };
  const imageUrl=value.logo_path?supabase.storage.from('homepage-media').getPublicUrl(value.logo_path).data.publicUrl:'';
@@ -58,8 +64,9 @@ export const BrandingSettings:React.FC=()=>{
   <div><h2 className="text-lg font-semibold">Logo & Navigation Labels</h2><p className="text-sm text-slate-500 mt-1">These labels are shared by desktop and mobile storefront navigation.</p></div>
   <div className="bg-white border rounded-xl p-5 space-y-4">
    <div><h3 className="font-medium">Store Logo</h3><p className="text-xs text-slate-500 mt-1">JPG, PNG or WebP · Maximum 5 MB.</p></div>
-   <div className="flex items-center gap-4">{(preview||imageUrl)?<img src={preview||imageUrl} alt="Store logo preview" className="max-h-20 max-w-48 object-contain border rounded p-2"/>:<div className="h-20 w-48 border border-dashed rounded flex items-center justify-center text-xs text-slate-400">No logo uploaded</div>}
+   <div className="flex flex-wrap items-center gap-4">{(preview||imageUrl)?<img src={preview||imageUrl} alt="Store logo preview" className="max-h-20 max-w-48 object-contain border rounded p-2"/>:<div className="h-20 w-48 border border-dashed rounded flex items-center justify-center text-xs text-slate-400">No logo uploaded</div>}
     <label className="text-sm underline cursor-pointer">Choose logo<input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={e=>setFile(e.target.files?.[0]||null)}/></label>
+    {(value.logo_path||file)&&<button type="button" onClick={removeLogo} disabled={busy} className="text-sm text-red-600 underline disabled:opacity-50">Remove logo</button>}
    </div>
    <div className="border-t pt-4 space-y-3"><h3 className="font-medium">Navigation Labels</h3>
     {([['home_label','Home'],['shop_label','Shop'],['about_label','About'],['account_label','Account']] as const).map(([key,label])=><label key={key} className="grid gap-1 text-sm">{label}<input maxLength={32} value={value[key]} onChange={e=>update(key,e.target.value)} className="border rounded-lg p-2"/></label>)}
