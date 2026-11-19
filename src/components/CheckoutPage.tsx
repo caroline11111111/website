@@ -40,19 +40,19 @@ export const CheckoutPage:React.FC<CheckoutPageProps>=({selectedCurrency,selecte
  const[file,setFile]=useState<File|null>(null);const[busy,setBusy]=useState(false);const[error,setError]=useState('');
  const[uploadedProofPath,setUploadedProofPath]=useState<string|null>(null);
  const[idempotencyKey,setIdempotencyKey]=useState<string|null>(null);
- const[quote,setQuote]=useState<any>(null);const[quoteError,setQuoteError]=useState('');const[paymentInstruction,setPaymentInstruction]=useState<any>(null);
+ const[quote,setQuote]=useState<any>(null);const[quoteError,setQuoteError]=useState('');const[whatsappPhone,setWhatsappPhone]=useState('+601158892234');
  const selected=useMemo(()=>items.filter(i=>selectedItemIds.includes(i.id)),[items,selectedItemIds]);
  const hasAllPrices=selected.every(i=>convertFromMYR(i.priceMYR,selectedCurrency)!==null);const subtotal=selected.reduce((sum,i)=>sum+(convertFromMYR(i.priceMYR,selectedCurrency)||0)*i.quantity,0);
  useEffect(()=>{let alive=true;if(!user||!selectedItemIds.length){setQuote(null);setQuoteError('');return;}
   supabase.rpc('quote_shipping_currency',{p_cart_item_ids:selectedItemIds,p_country_code:country,p_region_code:region||null,p_currency_code:selectedCurrency}).then(({data,error})=>{if(!alive)return;if(error){setQuote(null);setQuoteError(error.message);}else{setQuote(data);setQuoteError('');}});
   return()=>{alive=false;};
  },[user,selectedItemIds.join(','),country,region,selectedCurrency]);
- useEffect(()=>{let alive=true;setPaymentInstruction(null);supabase.from('currency_payment_instructions').select('currency_code,bank_name,account_name,account_number,payment_instructions,is_active').eq('currency_code',selectedCurrency).eq('is_active',true).maybeSingle().then(({data,error})=>{if(!alive)return;if(error){setQuoteError(error.message);return;}setPaymentInstruction(data||null);});return()=>{alive=false;};},[selectedCurrency]);
+ useEffect(()=>{let alive=true;supabase.from('site_settings').select('setting_value').eq('setting_key','whatsapp_support_phone').maybeSingle().then(({data})=>{if(!alive||!data?.setting_value)return;const phone=(data.setting_value as {phone?:string}|null)?.phone;if(phone)setWhatsappPhone(phone);});return()=>{alive=false;};},[]);
  useEffect(()=>{if(!user)return;supabase.from('customer_addresses').select('*').eq('user_id',user.id).eq('is_default',true).maybeSingle().then(({data})=>{if(data){setRecipientName(data.recipient_name);setPhone(data.phone);setLine1(data.address_line_1);setLine2(data.address_line_2||'');setCity(data.city);setRegion((data.country_code||'').toUpperCase()==='MY'?normalizeMalaysiaRegion(data.state_region||''):(data.state_region||''));setPostal(data.postal_code||'');setCountry(data.country_code);}});},[user]);
  const submit=async(e:React.FormEvent)=>{
   e.preventDefault();setError('');
   if(!user){setError('Please sign in before checkout.');return;}if(!selected.length){setError('Please return to your bag and select items.');return;}
-  if(!hasAllPrices){setError(`One or more selected items do not have a ${selectedCurrency} price configured.`);return;}if(!quote){setError(quoteError||'Please wait for a valid shipping quote before submitting.');return;}if(!paymentInstruction){setError(`Payment instructions for ${selectedCurrency} are not configured yet. Please contact support.`);return;}
+  if(!hasAllPrices){setError(`One or more selected items do not have a ${selectedCurrency} price configured.`);return;}if(!quote){setError(quoteError||'Please wait for a valid shipping quote before submitting.');return;}if(!whatsappPhone.replace(/\\D/g,'')){setError('WhatsApp customer service is currently unavailable. Please contact the store through another support channel.');return;}
   if(!file){setError('Please upload your payment proof before placing the order.');return;}
   if(file.size>5242880){setError('Payment proof must not exceed 5MB.');return;}
   if(!['image/jpeg','image/png','application/pdf'].includes(file.type)){setError('Only JPG, PNG, or PDF files are accepted.');return;}
@@ -98,7 +98,7 @@ export const CheckoutPage:React.FC<CheckoutPageProps>=({selectedCurrency,selecte
     <label className="block text-sm">Country Code<input required maxLength={2} value={country} onChange={e=>setCountry(e.target.value.toUpperCase())} className="mt-1 w-full border rounded p-3"/></label>
    </div>
   </section>
-  <section className="space-y-3 border-t pt-5"><h2 className="font-semibold">Bank Transfer Details · {selectedCurrency}</h2>{paymentInstruction?<div className="rounded-lg bg-gray-50 border p-4 text-sm space-y-1"><p><strong>Bank:</strong> {paymentInstruction.bank_name||'—'}</p><p><strong>Account Name:</strong> {paymentInstruction.account_name||'—'}</p><p><strong>Account Number:</strong> {paymentInstruction.account_number||'—'}</p>{paymentInstruction.payment_instructions&&<p className="whitespace-pre-wrap">{paymentInstruction.payment_instructions}</p>}</div>:<p className="text-sm text-amber-700">Receiving account details for {selectedCurrency} have not been configured. Checkout is unavailable until Admin adds them.</p>}</section>
+  <section className="space-y-3 border-t pt-5"><h2 className="font-semibold">Bank Transfer via WhatsApp · {selectedCurrency}</h2><p className="text-sm text-gray-600">Please contact our customer service on WhatsApp to receive the bank account details for your selected currency. Our team will assist you with the transfer before you submit your payment receipt.</p><a href={`https://wa.me/${whatsappPhone.replace(/\\D/g,'')}?text=${encodeURIComponent(`Hi, I would like to request bank transfer details for my ${selectedCurrency} checkout.`)}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center rounded-full bg-[#25D366] px-6 py-3 text-sm font-medium text-white hover:opacity-90">Get Bank Details on WhatsApp</a></section>
   <section className="space-y-3 border-t pt-5"><h2 className="font-semibold">Payment Proof</h2><p className="text-xs text-gray-500">Upload your payment receipt (JPG, PNG, or PDF; maximum 5MB). Uploading a receipt does not confirm payment. Our team will review it manually.</p><input type="file" required accept="image/jpeg,image/png,application/pdf" onChange={e=>{setFile(e.target.files?.[0]||null);setUploadedProofPath(null);setIdempotencyKey(null);setError('');}} className="block w-full text-sm"/>{uploadedProofPath&&<p className="text-xs text-green-700">Payment receipt uploaded and retained for this checkout attempt. It will not be uploaded again when you retry.</p>}</section>
   <section className="border-t pt-5 space-y-3"><h2 className="font-semibold">Selected Items</h2>
    {selected.map(i=><div key={i.id} className="flex justify-between text-sm"><span>{i.name} × {i.quantity}</span><span>{convertFromMYR(i.priceMYR,selectedCurrency)!==null?formatPrice((convertFromMYR(i.priceMYR,selectedCurrency)||0)*i.quantity,selectedCurrency):'Price not configured'}</span></div>)}
@@ -109,7 +109,7 @@ export const CheckoutPage:React.FC<CheckoutPageProps>=({selectedCurrency,selecte
    <p className="text-xs text-gray-500">If the price or shipping changes, you will need to review the updated quote and confirm again.</p>
   </section>
   {!hasAllPrices&&<p role="status" className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded p-3">One or more selected products cannot be priced in {selectedCurrency}. Please check that the currency is active and its exchange rate is configured.</p>}{error&&<p role="alert" className="text-sm text-red-600">{error}</p>}
-  <button type="submit" disabled={busy||!selected.length||!hasAllPrices||!quote||!paymentInstruction} className="w-full py-4 bg-black text-white rounded-full disabled:opacity-50">{busy?'Submitting Order…':'Submit Order with Payment Proof'}</button>
+  <button type="submit" disabled={busy||!selected.length||!hasAllPrices||!quote||!whatsappPhone.replace(/\\D/g,'')} className="w-full py-4 bg-black text-white rounded-full disabled:opacity-50">{busy?'Submitting Order…':'Submit Order with Payment Proof'}</button>
  </form></div>;
 };
 export default CheckoutPage;
