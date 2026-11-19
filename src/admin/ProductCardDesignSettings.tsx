@@ -20,7 +20,7 @@ function PreviewCard({design}:{design:ProductCardDesign}){
   <div className={'overflow-hidden bg-stone-100 '+(design.textPosition==='left'?'order-2':'order-1')} style={design.textPosition!=='below'?{width:'38%',minWidth:'38%',aspectRatio:ratioValue(design.imageRatio)}:{width:'100%',aspectRatio:ratioValue(design.imageRatio)}}>
    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-stone-200 via-stone-100 to-stone-300"><div className="w-2/3 h-3/4 rounded-[30%_30%_12%_12%] border border-stone-400/50 bg-gradient-to-br from-stone-400 to-stone-600 shadow-xl flex items-center justify-center"><span className="text-white/70 text-3xl">✦</span></div></div>
   </div>
-  <div className={(design.textPosition!=='below'?'order-2 flex-1 min-w-0 flex flex-col justify-center ':'')+'p-4 space-y-2 '+(design.textAlignment==='center'?'text-center':'text-left')}>
+  <div className={(design.textPosition!=='below'?(design.textPosition==='left'?'order-1 ':'order-2 ')+'flex-1 min-w-0 flex flex-col justify-center ':'')+'p-4 space-y-2 '+(design.textAlignment==='center'?'text-center':'text-left')}>
    {design.showBrand&&<p className="text-[10px] uppercase tracking-[.18em] text-stone-500">Brand name</p>}
    <p className="text-sm font-semibold text-stone-800">Classic Leather Handbag</p>
    {design.showCondition&&<p className="text-xs text-stone-500">Condition · Excellent</p>}
