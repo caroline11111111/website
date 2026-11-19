@@ -24,7 +24,24 @@ export function App(){
  const[branding,setBranding]=useState({logo_path:null as string|null,home_label:'Home',shop_label:'Shop',about_label:'About',account_label:'Account',nav_font_family:'inherit'});
  const[homeSectionContent,setHomeSectionContent]=useState({heading:'FEATURED HIGHLIGHTS',description:'Discover our finest curated selections',button_text:'Explore Shop'});
  useEffect(()=>{let alive=true;supabase.from('site_settings').select('setting_value').eq('setting_key','storefront_branding_settings').maybeSingle().then(({data,error})=>{if(!alive||error||!data?.setting_value)return;const raw=data.setting_value as Partial<typeof branding>;setBranding(current=>({...current,...raw}));});return()=>{alive=false;};},[]);
- useEffect(()=>{let alive=true;supabase.from('site_settings').select('setting_value').eq('setting_key','storefront_homepage_section_content').maybeSingle().then(({data,error})=>{if(!alive||error||!data?.setting_value)return;const raw=data.setting_value as Partial<typeof homeSectionContent>;setHomeSectionContent(current=>({...current,...raw}));});return()=>{alive=false;};},[]);
+ useEffect(()=>{
+  let alive=true;
+  const loadHomepageSectionContent=async()=>{
+   const{data,error}=await supabase.from('site_settings').select('setting_value').eq('setting_key','storefront_homepage_section_content').maybeSingle();
+   if(!alive||error||!data?.setting_value)return;
+   const raw=data.setting_value as Partial<typeof homeSectionContent>;
+   setHomeSectionContent(current=>({...current,...raw}));
+  };
+  void loadHomepageSectionContent();
+  const channel=supabase.channel('storefront-homepage-section-content')
+   .on('postgres_changes',{event:'*',schema:'public',table:'site_settings',filter:'setting_key=eq.storefront_homepage_section_content'},()=>{void loadHomepageSectionContent();})
+   .subscribe();
+  const refreshOnReturn=()=>{if(document.visibilityState==='visible')void loadHomepageSectionContent();};
+  window.addEventListener('focus',refreshOnReturn);
+  document.addEventListener('visibilitychange',refreshOnReturn);
+  const refreshInterval=window.setInterval(()=>{if(document.visibilityState==='visible')void loadHomepageSectionContent();},30000);
+  return()=>{alive=false;window.clearInterval(refreshInterval);window.removeEventListener('focus',refreshOnReturn);document.removeEventListener('visibilitychange',refreshOnReturn);void supabase.removeChannel(channel);};
+ },[]);
  const logoUrl=branding.logo_path?supabase.storage.from('homepage-media').getPublicUrl(branding.logo_path).data.publicUrl:'';
  const[currentTab,setCurrentTab]=useState('home');const[loginReturnTab,setLoginReturnTab]=useState('home');const openLogin=(returnTo:string=currentTab)=>{setLoginReturnTab(returnTo);setCurrentTab('login');};const[selectedCurrency,setSelectedCurrency]=useState(defaultCurrency);
  useEffect(()=>{setSelectedCurrency(defaultCurrency);},[defaultCurrency]);const[selectedProduct,setSelectedProduct]=useState<Product|null>(null);const[accountSubTab,setAccountSubTab]=useState('profile');const[selectedCartItemIds,setSelectedCartItemIds]=useState<string[]>([]);
