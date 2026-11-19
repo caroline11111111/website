@@ -14,6 +14,8 @@ export interface Product {
   pricesByCurrency?: Record<string, number>;
   description: string;
   images: SiteImageItem[];
+  availableStock?: number;
+  inventoryMode?: 'single_item' | 'multiple';
 }
 
 export const mockProducts: Product[] = [
