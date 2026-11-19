@@ -11,6 +11,7 @@ export interface Product {
   sku?: string;
   specifications?: Record<string, unknown>;
   priceMYR: number;
+  pricesByCurrency?: Record<string, number>;
   description: string;
   images: SiteImageItem[];
 }
