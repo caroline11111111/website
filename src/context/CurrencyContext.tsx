@@ -21,6 +21,7 @@ interface CurrencyContextValue {
   defaultCurrency:string;
   loading:boolean;
   formatPrice:(amount:number,currencyCode:string)=>string;
+  convertFromMYR:(amount:number,currencyCode:string)=>number|null;
 }
 const CurrencyContext=createContext<CurrencyContextValue|undefined>(undefined);
 
@@ -28,20 +29,23 @@ export const CurrencyProvider:React.FC<{children:React.ReactNode}>=({children})=
  const[currencies,setCurrencies]=useState<StoreCurrency[]>(DEFAULT_CURRENCIES);
  const[defaultCurrency,setDefaultCurrency]=useState('MYR');
  const[loading,setLoading]=useState(true);
+ const[exchangeRates,setExchangeRates]=useState<Record<string,number>>({MYR:1});
  useEffect(()=>{
   let alive=true;
-  Promise.all([supabase.from('store_currencies').select('code,name,symbol,decimal_places,is_active').order('display_order',{ascending:true}),supabase.from('site_settings').select('setting_value').eq('setting_key','storefront_default_currency').maybeSingle()]).then(([{data,error},{data:defaultRow}])=>{
+  Promise.all([supabase.from('store_currencies').select('code,name,symbol,decimal_places,is_active').order('display_order',{ascending:true}),supabase.from('site_settings').select('setting_value').eq('setting_key','storefront_default_currency').maybeSingle(),supabase.from('currency_exchange_rates').select('currency_code,rate,is_configured')]).then(([{data,error},{data:defaultRow},{data:rateRows}])=>{
    if(!alive)return;
    if(!error&&data){
     const rows=data.map((row:any)=>({code:String(row.code||'').toUpperCase(),name:String(row.name||row.code||''),symbol:String(row.symbol||row.code||''),decimalPlaces:Number(row.decimal_places??2),isActive:row.is_active===true})).filter(row=>/^[A-Z]{3}$/.test(row.code)&&Number.isInteger(row.decimalPlaces)&&row.decimalPlaces>=0&&row.decimalPlaces<=4);
     if(rows.some(row=>row.code==='MYR')){setCurrencies(rows);const selected=String((defaultRow?.setting_value as any)?.code||'MYR').toUpperCase();if(rows.some(row=>row.code===selected&&row.isActive))setDefaultCurrency(selected);}
    }
+   const rates:Record<string,number>={MYR:1};(rateRows||[]).forEach((row:any)=>{const code=String(row.currency_code||'').toUpperCase();const rate=Number(row.rate);if(row.is_configured&&Number.isFinite(rate)&&rate>0)rates[code]=rate;});setExchangeRates(rates);
    setLoading(false);
   });
   return()=>{alive=false;};
  },[]);
  const value=useMemo<CurrencyContextValue>(()=>({
   currencies,defaultCurrency,loading,
+  convertFromMYR:(amount,currencyCode)=>{const currency=currencies.find(row=>row.code===currencyCode&&row.isActive);const rate=exchangeRates[currencyCode];if(!currency||!Number.isFinite(amount)||!Number.isFinite(rate)||rate<=0)return null;return Number((amount*rate).toFixed(currency.decimalPlaces));},
   formatPrice:(amount,currencyCode)=>{
    const currency=currencies.find(row=>row.code===currencyCode&&row.isActive);
    if(!currency||!Number.isFinite(amount))return 'Price unavailable';
@@ -49,7 +53,7 @@ export const CurrencyProvider:React.FC<{children:React.ReactNode}>=({children})=
    // Never convert a MYR amount and present it as another currency.
    return `${currency.symbol} ${amount.toLocaleString(undefined,{minimumFractionDigits:currency.decimalPlaces,maximumFractionDigits:currency.decimalPlaces})}`;
   }
- }),[currencies,defaultCurrency,loading]);
+ }),[currencies,defaultCurrency,loading,exchangeRates]);
  return <CurrencyContext.Provider value={value}>{children}</CurrencyContext.Provider>;
 };
 export const useCurrency=()=>{
