@@ -19,10 +19,9 @@ export const CartProvider:React.FC<{children:React.ReactNode}>=({children})=>{
     const pics=product.product_images||[];const primary=pics.find((p:any)=>p.is_primary)||pics.sort((a:any,b:any)=>a.display_order-b.display_order)[0];
     const path=primary?.storage_path;
     const image=path?supabase.storage.from('product-images').getPublicUrl(path).data.publicUrl:'';
-    const priceTable=variant?'variant_currency_prices':'product_currency_prices';const idColumn=variant?'variant_id':'product_id';
-    const{data:priceRows}=await supabase.from(priceTable).select('currency_code,price').eq(idColumn,row.variant_id||row.product_id);
-    const pricesByCurrency:Record<string,number>={};(priceRows||[]).forEach((p:any)=>{pricesByCurrency[String(p.currency_code).toUpperCase()]=Number(p.price);});
-    return{id:row.id,productId:row.product_id,variantId:row.variant_id,name:product.name+(variant?' · '+variant.variant_name+': '+variant.variant_value:''),brand:product.brands?.name||'',priceMYR:Number(variant?.price_myr??product.price_myr??0),pricesByCurrency,imageUrl:image,quantity:row.quantity};
+    const priceMYR=Number(variant?.price_myr??product.price_myr??0);
+    const pricesByCurrency:Record<string,number>={MYR:priceMYR};
+    return{id:row.id,productId:row.product_id,variantId:row.variant_id,name:product.name+(variant?' · '+variant.variant_name+': '+variant.variant_value:''),brand:product.brands?.name||'',priceMYR,pricesByCurrency,imageUrl:image,quantity:row.quantity};
    }));
    setItems(mapped);
   }catch(error){console.error('Cart load failed',error);setItems([]);}
