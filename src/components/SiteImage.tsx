@@ -5,7 +5,7 @@ interface SiteImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
 }
 
 export const SiteImage: React.FC<SiteImageProps> = ({ src, fallbackUrl, alt, ...props }) => {
-  const [imgSrc, setImgSrc] = useState(src);
+  const [imgSrc, setImgSrc] = useState<string | undefined>(src);
   useEffect(() => { setImgSrc(src); }, [src]);
 
   return (
@@ -16,7 +16,7 @@ export const SiteImage: React.FC<SiteImageProps> = ({ src, fallbackUrl, alt, ...
         if (fallbackUrl && imgSrc !== fallbackUrl) {
           setImgSrc(fallbackUrl);
         } else {
-          setImgSrc('https://images.unsplash.com/photo-1534447677768-be436bb09401?w=200&auto=format&fit=crop&q=80');
+          setImgSrc(undefined);
         }
       }}
       {...props}
