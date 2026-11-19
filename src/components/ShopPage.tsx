@@ -3,7 +3,7 @@ import {Product} from '../config/products';
 import {useCurrency} from '../context/CurrencyContext';
 import {SiteImage} from './SiteImage';
 import {supabase} from '../lib/supabase';
-import {DEFAULT_PRODUCT_CARD_DESIGN,ProductCardDesign} from '../admin/ProductCardDesignSettings';
+import {DEFAULT_PRODUCT_CARD_DESIGN,ProductCardDesign} from '../config/productCardDesign';
 interface ShopPageProps{selectedCurrency:string;onSelectProduct:(product:Product)=>void;}
 export const ShopPage:React.FC<ShopPageProps>=({selectedCurrency,onSelectProduct})=>{
  const{formatPrice,convertFromMYR}=useCurrency();
