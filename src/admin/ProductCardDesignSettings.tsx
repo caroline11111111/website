@@ -16,11 +16,11 @@ const cardClasses=(style:ProductCardDesign['style'])=>({
  luxury:'border border-stone-200 rounded-2xl shadow-md hover:shadow-lg'
 }[style]);
 function PreviewCard({design}:{design:ProductCardDesign}){
- return <div className={'overflow-hidden bg-white transition-shadow '+(design.orientation==='horizontal'?'flex flex-row items-stretch':'flex flex-col')+' '+cardClasses(design.style)}>
-  <div className="overflow-hidden bg-stone-100" style={design.orientation==='horizontal'?{width:'38%',minWidth:'38%',aspectRatio:ratioValue(design.imageRatio)}:{width:'100%',aspectRatio:ratioValue(design.imageRatio)}}>
+ return <div className={'overflow-hidden bg-white transition-shadow '+(design.textPosition!=='below'?'flex flex-row items-stretch':'flex flex-col')+' '+cardClasses(design.style)}>
+  <div className={'overflow-hidden bg-stone-100 '+(design.textPosition==='left'?'order-2':'order-1')} style={design.textPosition!=='below'?{width:'38%',minWidth:'38%',aspectRatio:ratioValue(design.imageRatio)}:{width:'100%',aspectRatio:ratioValue(design.imageRatio)}}>
    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-stone-200 via-stone-100 to-stone-300"><div className="w-2/3 h-3/4 rounded-[30%_30%_12%_12%] border border-stone-400/50 bg-gradient-to-br from-stone-400 to-stone-600 shadow-xl flex items-center justify-center"><span className="text-white/70 text-3xl">✦</span></div></div>
   </div>
-  <div className={(design.orientation==='horizontal'?'flex-1 min-w-0 flex flex-col justify-center ':'')+'p-4 space-y-2 '+(design.textAlignment==='center'?'text-center':'text-left')}>
+  <div className={(design.textPosition!=='below'?'order-2 flex-1 min-w-0 flex flex-col justify-center ':'')+'p-4 space-y-2 '+(design.textAlignment==='center'?'text-center':'text-left')}>
    {design.showBrand&&<p className="text-[10px] uppercase tracking-[.18em] text-stone-500">Brand name</p>}
    <p className="text-sm font-semibold text-stone-800">Classic Leather Handbag</p>
    {design.showCondition&&<p className="text-xs text-stone-500">Condition · Excellent</p>}
@@ -39,6 +39,7 @@ export const ProductCardDesignSettings:React.FC=()=>{
   <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{presets.map(preset=><button type="button" key={preset.key} onClick={()=>update({style:preset.key})} className={'rounded-xl border p-3 text-left '+(design.style===preset.key?'border-slate-900 bg-slate-50 ring-1 ring-slate-900':'hover:bg-slate-50')}><span className="block font-medium text-sm">{preset.name}</span><span className="mt-1 block text-xs text-slate-500">{preset.description}</span></button>)}</div>
   <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
    <label className="grid gap-1 text-sm">Card orientation<select value={design.orientation} onChange={e=>update({orientation:e.target.value as ProductCardDesign['orientation']})} className="rounded-lg border p-2"><option value="vertical">Vertical · Image above details</option><option value="horizontal">Horizontal · Image beside details</option></select></label>
+   <label className="grid gap-1 text-sm">Text position<select value={design.textPosition} onChange={e=>update({textPosition:e.target.value as ProductCardDesign['textPosition']})} className="rounded-lg border p-2"><option value="below">Below image</option><option value="right">Right of image</option><option value="left">Left of image</option></select></label>
    <label className="grid gap-1 text-sm">Image ratio<select value={design.imageRatio} onChange={e=>update({imageRatio:e.target.value as ProductCardDesign['imageRatio']})} className="rounded-lg border p-2"><option value="1:1">Square · 1:1</option><option value="4:5">Portrait · 4:5</option><option value="3:2">Landscape · 3:2</option></select></label>
    <label className="grid gap-1 text-sm">Image display<select value={design.imageFit} onChange={e=>update({imageFit:e.target.value as ProductCardDesign['imageFit']})} className="rounded-lg border p-2"><option value="cover">Fill frame · Cover</option><option value="contain">Show full image · Contain</option></select></label>
    <label className="grid gap-1 text-sm">Text alignment<select value={design.textAlignment} onChange={e=>update({textAlignment:e.target.value as ProductCardDesign['textAlignment']})} className="rounded-lg border p-2"><option value="left">Left</option><option value="center">Center</option></select></label>
