@@ -25,11 +25,24 @@ export const HomepageSectionContentSettings:React.FC=()=>{
  const save=async()=>{
   if(!value.heading.trim()||!value.button_text.trim()){setError('Section heading and button text are required.');return;}
   setBusy(true);setError('');setMessage('');
-  const{data:userData}=await supabase.auth.getUser();
-  const{error:saveError}=await supabase.from('site_settings').upsert({setting_key:'storefront_homepage_section_content',setting_value:{heading:value.heading.trim(),description:value.description.trim(),button_text:value.button_text.trim()},updated_by:userData.user?.id||null,updated_at:new Date().toISOString()},{onConflict:'setting_key'});
-  if(saveError){setError(saveError.message);setBusy(false);return;}
-  setMessage('Homepage section content saved and published. The storefront will load the new text automatically.');
-  setBusy(false);
+  try{
+   const{data:userData,error:userError}=await supabase.auth.getUser();
+   if(userError)throw userError;
+   const payload={heading:value.heading.trim(),description:value.description.trim(),button_text:value.button_text.trim()};
+   const{error:saveError}=await supabase.from('site_settings').upsert({setting_key:'storefront_homepage_section_content',setting_value:payload,updated_by:userData.user?.id||null,updated_at:new Date().toISOString()},{onConflict:'setting_key'});
+   if(saveError)throw saveError;
+   const{data:confirmed,error:verifyError}=await supabase.from('site_settings').select('setting_value').eq('setting_key','storefront_homepage_section_content').maybeSingle();
+   if(verifyError)throw verifyError;
+   const saved=confirmed?.setting_value as Partial<HomeSectionContent>|null;
+   if(!saved||saved.heading!==payload.heading||saved.description!==payload.description||saved.button_text!==payload.button_text){
+    throw new Error('Save request completed, but the saved content could not be verified. Please try again.');
+   }
+   setMessage('Published successfully. The storefront will refresh the latest text automatically.');
+  }catch(saveError){
+   setError(saveError instanceof Error?saveError.message:'Unable to publish homepage section content. Please try again.');
+  }finally{
+   setBusy(false);
+  }
  };
  return <section className="mt-5 max-w-3xl rounded-xl border bg-white p-5 space-y-4">
   <div><h3 className="font-semibold">Homepage Section Content</h3><p className="mt-1 text-xs text-slate-500">Edit the Featured Highlights heading, supporting description and Explore Shop button. The same text is used on Desktop and Mobile.</p></div>
