@@ -33,7 +33,7 @@ const explainCheckoutError=(message:string,proofUploaded:boolean):string=>{
   : `Order was not created. ${explanation}`;
 };
 export const CheckoutPage:React.FC<CheckoutPageProps>=({selectedCurrency,selectedItemIds,onOrderComplete})=>{
- const{formatPrice}=useCurrency();const{user}=useAuth();const{items,refresh}=useCart();
+ const{formatPrice,convertFromMYR}=useCurrency();const{user}=useAuth();const{items,refresh}=useCart();
  const[recipientName,setRecipientName]=useState(user?.name||'');const[phone,setPhone]=useState(user?.phone||'');
  const[line1,setLine1]=useState('');const[line2,setLine2]=useState('');const[city,setCity]=useState('');
  const[region,setRegion]=useState('');const[postal,setPostal]=useState('');const[country,setCountry]=useState('MY');
@@ -42,7 +42,7 @@ export const CheckoutPage:React.FC<CheckoutPageProps>=({selectedCurrency,selecte
  const[idempotencyKey,setIdempotencyKey]=useState<string|null>(null);
  const[quote,setQuote]=useState<any>(null);const[quoteError,setQuoteError]=useState('');const[paymentInstruction,setPaymentInstruction]=useState<any>(null);
  const selected=useMemo(()=>items.filter(i=>selectedItemIds.includes(i.id)),[items,selectedItemIds]);
- const hasAllPrices=selected.every(i=>Number.isFinite(i.pricesByCurrency?.[selectedCurrency]));const subtotal=selected.reduce((sum,i)=>sum+(i.pricesByCurrency?.[selectedCurrency]||0)*i.quantity,0);
+ const hasAllPrices=selected.every(i=>convertFromMYR(i.priceMYR,selectedCurrency)!==null);const subtotal=selected.reduce((sum,i)=>sum+(convertFromMYR(i.priceMYR,selectedCurrency)||0)*i.quantity,0);
  useEffect(()=>{let alive=true;if(!user||!selectedItemIds.length){setQuote(null);setQuoteError('');return;}
   supabase.rpc('quote_shipping_currency',{p_cart_item_ids:selectedItemIds,p_country_code:country,p_region_code:region||null,p_currency_code:selectedCurrency}).then(({data,error})=>{if(!alive)return;if(error){setQuote(null);setQuoteError(error.message);}else{setQuote(data);setQuoteError('');}});
   return()=>{alive=false;};
@@ -101,14 +101,14 @@ export const CheckoutPage:React.FC<CheckoutPageProps>=({selectedCurrency,selecte
   <section className="space-y-3 border-t pt-5"><h2 className="font-semibold">Bank Transfer Details · {selectedCurrency}</h2>{paymentInstruction?<div className="rounded-lg bg-gray-50 border p-4 text-sm space-y-1"><p><strong>Bank:</strong> {paymentInstruction.bank_name||'—'}</p><p><strong>Account Name:</strong> {paymentInstruction.account_name||'—'}</p><p><strong>Account Number:</strong> {paymentInstruction.account_number||'—'}</p>{paymentInstruction.payment_instructions&&<p className="whitespace-pre-wrap">{paymentInstruction.payment_instructions}</p>}</div>:<p className="text-sm text-amber-700">Receiving account details for {selectedCurrency} have not been configured. Checkout is unavailable until Admin adds them.</p>}</section>
   <section className="space-y-3 border-t pt-5"><h2 className="font-semibold">Payment Proof</h2><p className="text-xs text-gray-500">Upload your payment receipt (JPG, PNG, or PDF; maximum 5MB). Uploading a receipt does not confirm payment. Our team will review it manually.</p><input type="file" required accept="image/jpeg,image/png,application/pdf" onChange={e=>{setFile(e.target.files?.[0]||null);setUploadedProofPath(null);setIdempotencyKey(null);setError('');}} className="block w-full text-sm"/>{uploadedProofPath&&<p className="text-xs text-green-700">Payment receipt uploaded and retained for this checkout attempt. It will not be uploaded again when you retry.</p>}</section>
   <section className="border-t pt-5 space-y-3"><h2 className="font-semibold">Selected Items</h2>
-   {selected.map(i=><div key={i.id} className="flex justify-between text-sm"><span>{i.name} × {i.quantity}</span><span>{Number.isFinite(i.pricesByCurrency?.[selectedCurrency])?formatPrice(i.pricesByCurrency[selectedCurrency]*i.quantity,selectedCurrency):'Price not configured'}</span></div>)}
+   {selected.map(i=><div key={i.id} className="flex justify-between text-sm"><span>{i.name} × {i.quantity}</span><span>{convertFromMYR(i.priceMYR,selectedCurrency)!==null?formatPrice((convertFromMYR(i.priceMYR,selectedCurrency)||0)*i.quantity,selectedCurrency):'Price not configured'}</span></div>)}
    <div className="border-t pt-3 flex justify-between font-semibold"><span>Subtotal</span><span>{quote?formatPrice(Number(quote.subtotal),selectedCurrency):hasAllPrices?formatPrice(subtotal,selectedCurrency):'Price not configured'}</span></div>
    <div className="flex justify-between text-sm"><span>Shipping</span><span>{quote?formatPrice(Number(quote.shipping_fee),selectedCurrency):'—'}</span></div>
    <div className="flex justify-between font-bold text-lg"><span>Total</span><span>{quote?formatPrice(Number(quote.total),selectedCurrency):'—'}</span></div>
    {quoteError&&<p className="text-xs text-red-600">{quoteError}</p>}
    <p className="text-xs text-gray-500">If the price or shipping changes, you will need to review the updated quote and confirm again.</p>
   </section>
-  {!hasAllPrices&&<p role="status" className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded p-3">One or more selected products do not yet have a {selectedCurrency} price. No currency conversion will be used.</p>}{error&&<p role="alert" className="text-sm text-red-600">{error}</p>}
+  {!hasAllPrices&&<p role="status" className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded p-3">One or more selected products cannot be priced in {selectedCurrency}. Please check that the currency is active and its exchange rate is configured.</p>}{error&&<p role="alert" className="text-sm text-red-600">{error}</p>}
   <button type="submit" disabled={busy||!selected.length||!hasAllPrices||!quote||!paymentInstruction} className="w-full py-4 bg-black text-white rounded-full disabled:opacity-50">{busy?'Submitting Order…':'Submit Order with Payment Proof'}</button>
  </form></div>;
 };
