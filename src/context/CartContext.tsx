@@ -20,7 +20,7 @@ export const CartProvider:React.FC<{children:React.ReactNode}>=({children})=>{
     const path=primary?.storage_path;
     const image=path?supabase.storage.from('product-images').getPublicUrl(path).data.publicUrl:'';
     const priceTable=variant?'variant_currency_prices':'product_currency_prices';const idColumn=variant?'variant_id':'product_id';
-    const{data:priceRows}=await supabase.from(priceTable).select('currency_code,price').eq(idColumn,variant?.id||row.product_id);
+    const{data:priceRows}=await supabase.from(priceTable).select('currency_code,price').eq(idColumn,row.variant_id||row.product_id);
     const pricesByCurrency:Record<string,number>={};(priceRows||[]).forEach((p:any)=>{pricesByCurrency[String(p.currency_code).toUpperCase()]=Number(p.price);});
     return{id:row.id,productId:row.product_id,variantId:row.variant_id,name:product.name+(variant?' · '+variant.variant_name+': '+variant.variant_value:''),brand:product.brands?.name||'',priceMYR:Number(variant?.price_myr??product.price_myr??0),pricesByCurrency,imageUrl:image,quantity:row.quantity};
    }));
