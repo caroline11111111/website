@@ -1,15 +1,7 @@
 import React,{useEffect,useState} from 'react';
 import {supabase} from '../lib/supabase';
 
-export type ProductCardDesign={
- style:'classic'|'editorial'|'minimal'|'luxury';
- imageRatio:'1:1'|'4:5'|'3:2';
- imageFit:'cover'|'contain';
- textAlignment:'left'|'center';
- showBrand:boolean;
- showCondition:boolean;
-};
-export const DEFAULT_PRODUCT_CARD_DESIGN:ProductCardDesign={style:'classic',imageRatio:'1:1',imageFit:'cover',textAlignment:'left',showBrand:true,showCondition:true};
+import {DEFAULT_PRODUCT_CARD_DESIGN,ProductCardDesign} from '../config/productCardDesign';
 const presets:Array<{key:ProductCardDesign['style'];name:string;description:string}>=[
  {key:'classic',name:'Classic',description:'Clean product card with a subtle border and soft shadow'},
  {key:'editorial',name:'Editorial',description:'Minimal luxury catalogue with centered product details'},
