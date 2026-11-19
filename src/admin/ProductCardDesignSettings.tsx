@@ -16,8 +16,8 @@ const cardClasses=(style:ProductCardDesign['style'])=>({
  luxury:'border border-stone-200 rounded-2xl shadow-md hover:shadow-lg'
 }[style]);
 function PreviewCard({design}:{design:ProductCardDesign}){
- return <div className={'overflow-hidden bg-white transition-shadow '+(design.textPosition!=='below'?'flex flex-row items-stretch':'flex flex-col')+' '+cardClasses(design.style)}>
-  <div className={'overflow-hidden bg-stone-100 '+(design.textPosition==='left'?'order-2':'order-1')} style={design.textPosition!=='below'?{width:'38%',minWidth:'38%',aspectRatio:ratioValue(design.imageRatio)}:{width:'100%',aspectRatio:ratioValue(design.imageRatio)}}>
+ return <div style={design.textPosition==='below'?{display:'grid',gridTemplateColumns:'minmax(0,1fr)'}:{display:'grid',gridTemplateColumns:'38% minmax(0,1fr)',alignItems:'stretch'}} className={'overflow-hidden bg-white transition-shadow '+cardClasses(design.style)}>
+  <div className={'overflow-hidden bg-stone-100 '+(design.textPosition==='left'?'order-2':'order-1')} style={{gridColumn:design.textPosition==='left'?2:1,width:'100%',aspectRatio:ratioValue(design.imageRatio)}}>
    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-stone-200 via-stone-100 to-stone-300"><div className="w-2/3 h-3/4 rounded-[30%_30%_12%_12%] border border-stone-400/50 bg-gradient-to-br from-stone-400 to-stone-600 shadow-xl flex items-center justify-center"><span className="text-white/70 text-3xl">✦</span></div></div>
   </div>
   <div className={(design.textPosition!=='below'?(design.textPosition==='left'?'order-1 ':'order-2 ')+'flex-1 min-w-0 flex flex-col justify-center ':'')+'p-4 space-y-2 '+(design.textAlignment==='center'?'text-center':'text-left')}>
