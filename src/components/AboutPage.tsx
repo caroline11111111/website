@@ -10,7 +10,7 @@ export const AboutPage:React.FC=()=>{
  const[layout,setLayout]=useState<Layout|null>(null);
  useEffect(()=>{let alive=true;Promise.all([supabase.from('about_images').select('id,title,alt_text,image_path').eq('is_active',true).order('display_order').order('created_at'),supabase.from('storefront_page_layouts').select('layout_json').eq('page_key','about').eq('is_published',true).maybeSingle()]).then(([im,l])=>{if(!alive)return;if(!im.error&&im.data&&im.data.length)setImages((im.data as AboutImage[]).map(img=>({id:img.id,url:supabase.storage.from('homepage-media').getPublicUrl(img.image_path).data.publicUrl,alt:img.alt_text||img.title||'About'})));if(!l.error&&l.data?.layout_json){const value=l.data.layout_json as Layout;if(Array.isArray(value.blocks)&&value.blocks.length)setLayout(value);}});return()=>{alive=false;};},[]);
  const publicUrl=(path?:string)=>path?supabase.storage.from('homepage-media').getPublicUrl(path).data.publicUrl:'';
- if(layout)return <div className="about-freeform-page w-full overflow-hidden" style={{background:layout.background||'transparent'}}><style>{`
+ if(layout)return <div className="about-freeform-page w-full overflow-hidden" style={{background:'transparent'}}><style>{`
  .about-freeform-page{min-height:70vh}
  .about-freeform-stage{position:relative;width:100%;aspect-ratio:var(--desktop-aspect-ratio);overflow:hidden}
  .about-freeform-element{position:absolute;box-sizing:border-box;overflow:hidden}
