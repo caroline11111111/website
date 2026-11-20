@@ -2,6 +2,7 @@ import React,{useEffect,useState} from 'react';
 import {useAuth} from '../context/AuthContext';
 import {supabase} from '../lib/supabase';
 import {useTheme,themeToCssVars} from '../context/ThemeContext';
+import {useLanguage} from '../context/LanguageContext';
 
 interface AccountPageProps{initialSubTab?:string;selectedCurrency:string;onGoOrders:()=>void;}
 type AddressRow={id:string;recipient_name:string;phone:string;address_line_1:string;address_line_2:string|null;city:string;state_region:string|null;postal_code:string|null;country_code:string;};
@@ -20,7 +21,7 @@ export const AccountPage:React.FC<AccountPageProps>=({onGoOrders})=>{
  const[busy,setBusy]=useState(false);
  const[message,setMessage]=useState('');
  const[error,setError]=useState('');
- const{currentTheme}=useTheme();
+ const{currentTheme}=useTheme(); const{language}=useLanguage(); const zh=language==='zh';
 
  useEffect(()=>{
   if(!user)return;
@@ -79,28 +80,28 @@ export const AccountPage:React.FC<AccountPageProps>=({onGoOrders})=>{
  if(!user)return <div className="py-16 text-center" style={{...themeToCssVars(currentTheme),backgroundColor:'var(--theme-background)',color:'var(--theme-text-primary)'}}>Please sign in to view your account.</div>;
  return <div className="w-full max-w-3xl mx-auto px-6 py-12 space-y-8" style={{...themeToCssVars(currentTheme),backgroundColor:'var(--theme-background)',color:'var(--theme-text-primary)'}}>
   <div className="flex justify-between items-center border-b pb-6" style={{borderColor:'var(--theme-border)'}}>
-   <h1 className="text-3xl font-light">My Account</h1>
-   <button onClick={()=>void logout()} className="text-xs underline" style={{color:'var(--theme-secondary)'}}>Sign Out</button>
+   <h1 className="text-3xl font-light">{zh?'我的账户':'My Account'}</h1>
+   <button onClick={()=>void logout()} className="text-xs underline" style={{color:'var(--theme-secondary)'}}>{zh?'登出':'Sign Out'}</button>
   </div>
   <div className="flex flex-wrap gap-3">
-   <button type="button" onClick={onGoOrders} className="px-6 py-3 rounded-full text-xs border" style={{borderColor:'var(--theme-border)',color:'var(--theme-secondary)'}}>My Orders</button>
+   <button type="button" onClick={onGoOrders} className="px-6 py-3 rounded-full text-xs border" style={{borderColor:'var(--theme-border)',color:'var(--theme-secondary)'}}>{zh?'我的订单':'My Orders'}</button>
   </div>
   <form onSubmit={save} className="p-6 rounded-lg border max-w-xl space-y-4" style={{backgroundColor:'var(--theme-surface)',borderColor:'var(--theme-border)'}}>
-   <h2 className="font-semibold">Profile Information</h2>
+   <h2 className="font-semibold">{zh?'个人资料':'Profile Information'}</h2>
    <p className="text-sm" style={{color:'var(--theme-text-secondary)'}}>Email: {user.email}</p>
-   <label className="block text-sm">Full Name
+   <label className="block text-sm">{zh?'姓名':'Full Name'}
     <input value={name} onChange={e=>setName(e.target.value)} required className="mt-1 w-full rounded p-3 border outline-none" style={fieldStyle}/>
    </label>
-   <label className="block text-sm">Phone Number
+   <label className="block text-sm">{zh?'电话号码':'Phone Number'}
     <input value={phone} onChange={e=>setPhone(e.target.value)} className="mt-1 w-full rounded p-3 border outline-none" style={fieldStyle}/>
    </label>
    <div className="border-t pt-4 space-y-3">
-    <h3 className="font-semibold">Default Delivery Address</h3>
+    <h3 className="font-semibold">{zh?'默认收货地址':'Default Delivery Address'}</h3>
     <p className="text-xs" style={{color:'var(--theme-text-secondary)'}}>This address will be filled in automatically at Checkout. Leave all address fields blank if you do not want to save a delivery address yet.</p>
-    <label className="block text-sm">Address Line 1
+    <label className="block text-sm">{zh?'地址第一行':'Address Line 1'}
      <input value={addressLine1} onChange={e=>setAddressLine1(e.target.value)} className="mt-1 w-full rounded p-3 border outline-none" style={fieldStyle}/>
     </label>
-    <label className="block text-sm">Address Line 2
+    <label className="block text-sm">{zh?'地址第二行':'Address Line 2'}
      <input value={addressLine2} onChange={e=>setAddressLine2(e.target.value)} className="mt-1 w-full rounded p-3 border outline-none" style={fieldStyle}/>
     </label>
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
