@@ -4,7 +4,7 @@ import {supabase} from '../lib/supabase';
 import {useLanguage} from '../context/LanguageContext';
 
 type BannerData={title:string|null;description:string|null;image_path:string;mobile_image_path:string|null;link_url:string|null};
-type LayoutBlock={id:string;type:string;text?:string;image_path?:string;alt?:string;align?:string;height?:number;shape?:string;size?:string;x?:number;y?:number;width?:number;heightPct?:number;fontSize?:number;color?:string;background?:string;mobileX?:number;mobileY?:number;mobileWidth?:number;mobileHeight?:number};
+type LayoutBlock={id:string;type:string;text?:string;text_en?:string;text_zh?:string;image_path?:string;alt?:string;align?:string;height?:number;shape?:string;size?:string;x?:number;y?:number;width?:number;heightPct?:number;fontSize?:number;color?:string;background?:string;mobileX?:number;mobileY?:number;mobileWidth?:number;mobileHeight?:number};
 type Layout={version?:number;blocks:LayoutBlock[];background?:string;mobileBackground?:string};
 
 export const Banner:React.FC=()=>{ const{language}=useLanguage(); const zh=language==='zh';
@@ -49,7 +49,7 @@ export const Banner:React.FC=()=>{ const{language}=useLanguage(); const zh=langu
   const width=isMobile?(block.mobileWidth??block.width??84):(block.width??84);
   const height=isMobile?(block.mobileHeight??block.heightPct??20):(block.heightPct??20);
   const common:React.CSSProperties={position:'absolute',left:x+'%',top:y+'%',width:width+'%',height:height+'%',boxSizing:'border-box',overflow:'hidden'};
-  if(block.type==='text')return <div key={block.id} style={{...common,display:'flex',alignItems:'center',justifyContent:block.align==='center'?'center':block.align==='right'?'flex-end':'flex-start',padding:8,fontSize:block.fontSize||22,color:block.color||'#292524',textAlign:(block.align||'left') as any,whiteSpace:'pre-wrap',overflowWrap:'anywhere',lineHeight:1.25}}>{block.text||''}</div>;
+  if(block.type==='text'){const text=zh?(block.text_zh||block.text_en||block.text||''):(block.text_en||block.text||'');return <div key={block.id} style={{...common,display:'flex',alignItems:'center',justifyContent:block.align==='center'?'center':block.align==='right'?'flex-end':'flex-start',padding:8,fontSize:block.fontSize||22,color:block.color||'#292524',textAlign:(block.align||'left') as any,whiteSpace:'pre-wrap',overflowWrap:'anywhere',lineHeight:1.25}}>{text}</div>;}
   if(block.type==='image')return <div key={block.id} style={common}>{block.image_path?<SiteImage src={publicUrl(block.image_path)} alt={block.alt||'Banner image'} className="h-full w-full object-cover"/>:null}</div>;
   if(block.type==='divider')return <div key={block.id} style={{...common,display:'flex',alignItems:'center',padding:'0 8px'}}><div style={{height:1,width:'100%',background:'currentColor',opacity:.4}}/></div>;
   if(block.type==='spacer')return <div key={block.id} style={{...common,height:height+'%',pointerEvents:'none'}}/>;
