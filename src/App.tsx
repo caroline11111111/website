@@ -30,8 +30,9 @@ export function App(){
   const loadHomepageSectionContent=async()=>{
    const{data,error}=await supabase.from('site_settings').select('setting_value').eq('setting_key','storefront_homepage_section_content').maybeSingle();
    if(!alive||error||!data?.setting_value)return;
-   const raw=data.setting_value as Partial<typeof homeSectionContent>;
-   setHomeSectionContent(current=>({...current,...raw}));
+   const raw=data.setting_value as any;
+   if(raw?.en||raw?.zh)setHomeSectionContent(current=>({en:{...current.en,...(raw.en||{})},zh:{...current.zh,...(raw.zh||{})}}));
+   else if(raw)setHomeSectionContent(current=>({...current,en:{...current.en,heading:raw.heading||current.en.heading,description:raw.description||current.en.description,button_text:raw.button_text||current.en.button_text}}));
   };
   void loadHomepageSectionContent();
   const channel=supabase.channel('storefront-homepage-section-content')
