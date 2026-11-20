@@ -203,8 +203,7 @@ begin
     'rate_id',v_rate.id,'calculation_type',v_rate.calculation_type
   );
 end;
-$function$
-
+$function$;
 
 insert into public.shipping_rate_currency_prices(
   shipping_rate_id,currency_code,base_fee,additional_fee,flat_fee,volume_fee_per_litre,per_item_fee,updated_at
