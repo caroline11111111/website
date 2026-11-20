@@ -88,7 +88,7 @@ export const AccountPage:React.FC<AccountPageProps>=({onGoOrders})=>{
   </div>
   <form onSubmit={save} className="p-6 rounded-lg border max-w-xl space-y-4" style={{backgroundColor:'var(--theme-surface)',borderColor:'var(--theme-border)'}}>
    <h2 className="font-semibold">{zh?'个人资料':'Profile Information'}</h2>
-   <p className="text-sm" style={{color:'var(--theme-text-secondary)'}}>Email: {user.email}</p>
+   <p className="text-sm" style={{color:'var(--theme-text-secondary)'}}>{zh?'电子邮箱：':'Email: '}{user.email}</p>
    <label className="block text-sm">{zh?'姓名':'Full Name'}
     <input value={name} onChange={e=>setName(e.target.value)} required className="mt-1 w-full rounded p-3 border outline-none" style={fieldStyle}/>
    </label>
@@ -97,7 +97,7 @@ export const AccountPage:React.FC<AccountPageProps>=({onGoOrders})=>{
    </label>
    <div className="border-t pt-4 space-y-3">
     <h3 className="font-semibold">{zh?'默认收货地址':'Default Delivery Address'}</h3>
-    <p className="text-xs" style={{color:'var(--theme-text-secondary)'}}>This address will be filled in automatically at Checkout. Leave all address fields blank if you do not want to save a delivery address yet.</p>
+    <p className="text-xs" style={{color:'var(--theme-text-secondary)'}}>{zh?'此地址将在结账时自动填写。如暂时不想保存收货地址，请将所有地址栏留空。':'This address will be filled in automatically at Checkout. Leave all address fields blank if you do not want to save a delivery address yet.'}</p>
     <label className="block text-sm">{zh?'地址第一行':'Address Line 1'}
      <input value={addressLine1} onChange={e=>setAddressLine1(e.target.value)} className="mt-1 w-full rounded p-3 border outline-none" style={fieldStyle}/>
     </label>
@@ -105,10 +105,10 @@ export const AccountPage:React.FC<AccountPageProps>=({onGoOrders})=>{
      <input value={addressLine2} onChange={e=>setAddressLine2(e.target.value)} className="mt-1 w-full rounded p-3 border outline-none" style={fieldStyle}/>
     </label>
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-     <label className="block text-sm">City<input value={city} onChange={e=>setCity(e.target.value)} className="mt-1 w-full rounded p-3 border outline-none" style={fieldStyle}/></label>
-     <label className="block text-sm">State / Region<input value={region} onChange={e=>setRegion(e.target.value)} className="mt-1 w-full rounded p-3 border outline-none" style={fieldStyle}/></label>
-     <label className="block text-sm">Postal Code<input value={postalCode} onChange={e=>setPostalCode(e.target.value)} className="mt-1 w-full rounded p-3 border outline-none" style={fieldStyle}/></label>
-     <label className="block text-sm">Country Code<input maxLength={2} value={countryCode} onChange={e=>setCountryCode(e.target.value.toUpperCase())} className="mt-1 w-full rounded p-3 border outline-none" style={fieldStyle}/></label>
+     <label className="block text-sm">{zh?'城市':'City'}<input value={city} onChange={e=>setCity(e.target.value)} className="mt-1 w-full rounded p-3 border outline-none" style={fieldStyle}/></label>
+     <label className="block text-sm">{zh?'州属／地区':'State / Region'}<input value={region} onChange={e=>setRegion(e.target.value)} className="mt-1 w-full rounded p-3 border outline-none" style={fieldStyle}/></label>
+     <label className="block text-sm">{zh?'邮政编码':'Postal Code'}<input value={postalCode} onChange={e=>setPostalCode(e.target.value)} className="mt-1 w-full rounded p-3 border outline-none" style={fieldStyle}/></label>
+     <label className="block text-sm">{zh?'国家代码':'Country Code'}<input maxLength={2} value={countryCode} onChange={e=>setCountryCode(e.target.value.toUpperCase())} className="mt-1 w-full rounded p-3 border outline-none" style={fieldStyle}/></label>
     </div>
    </div>
    {error&&<p role="alert" className="text-sm text-red-600">{error}</p>}
