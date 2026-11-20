@@ -1,11 +1,13 @@
 import React,{useEffect,useState} from 'react';
 import {supabase} from '../lib/supabase';
 
-type BrandingSettingsValue={logo_path:string|null;home_label:string;shop_label:string;about_label:string;account_label:string;nav_font_family:string;};
-const DEFAULT_VALUE:BrandingSettingsValue={logo_path:null,home_label:'Home',shop_label:'Shop',about_label:'About',account_label:'Account',nav_font_family:'inherit'};
+type BrandingSettingsValue={logo_path:string|null;labels:{en:{home:string;shop:string;about:string;account:string};zh:{home:string;shop:string;about:string;account:string}};nav_font_family:string;};
+const DEFAULT_VALUE:BrandingSettingsValue={logo_path:null,labels:{en:{home:'Home',shop:'Shop',about:'About',account:'Account'},zh:{home:'首页',shop:'商店',about:'关于我们',account:'账户'}},nav_font_family:'inherit'};
+const normalize=(raw:any):BrandingSettingsValue=>({logo_path:raw?.logo_path||null,nav_font_family:raw?.nav_font_family||'inherit',labels:raw?.labels?{en:{...DEFAULT_VALUE.labels.en,...raw.labels.en},zh:{...DEFAULT_VALUE.labels.zh,...raw.labels.zh}}:{en:{home:raw?.home_label||'Home',shop:raw?.shop_label||'Shop',about:raw?.about_label||'About',account:raw?.account_label||'Account'},zh:{...DEFAULT_VALUE.labels.zh}}});
 
 export const BrandingSettings:React.FC=()=>{
  const[value,setValue]=useState<BrandingSettingsValue>(DEFAULT_VALUE);
+ const[locale,setLocale]=useState<'en'|'zh'>('en');
  const[file,setFile]=useState<File|null>(null);
  const[preview,setPreview]=useState('');
  const[busy,setBusy]=useState(false);
@@ -16,8 +18,8 @@ export const BrandingSettings:React.FC=()=>{
   supabase.from('site_settings').select('setting_value').eq('setting_key','storefront_branding_settings').maybeSingle().then(({data,error:loadError})=>{
    if(!alive)return;
    if(loadError){setError(loadError.message);return;}
-   const raw=data?.setting_value as Partial<BrandingSettingsValue>|null;
-   if(raw)setValue({...DEFAULT_VALUE,...raw});
+   const raw=data?.setting_value as any;
+   if(raw)setValue(normalize(raw));
   });
   return()=>{alive=false;};
  },[]);
@@ -32,8 +34,8 @@ export const BrandingSettings:React.FC=()=>{
   setMessage('Logo removal selected. Click Save Branding Settings to apply it.');
  };
  const save=async()=>{
-  if(!value.home_label.trim()||!value.shop_label.trim()||!value.about_label.trim()||!value.account_label.trim()){
-   setError('All four navigation labels are required.');return;
+  if((['home','shop','about','account'] as const).some(key=>!value.labels.en[key].trim()||!value.labels.zh[key].trim())){
+   setError('All four navigation labels are required in both languages.');return;
   }
   setBusy(true);setError('');setMessage('');
   let logoPath=value.logo_path;
@@ -55,11 +57,12 @@ export const BrandingSettings:React.FC=()=>{
    updated_at:new Date().toISOString()
   },{onConflict:'setting_key'});
   if(saveError){setError(saveError.message);setBusy(false);return;}
-  setValue(current=>({...current,logo_path:logoPath}));setFile(null);setMessage(logoPath?'Logo and navigation labels saved.':'Logo removed and navigation labels saved.');
+  setValue(current=>({...current,logo_path:logoPath}));setFile(null);setMessage(logoPath?'Logo and bilingual bilingual navigation labels saved.':'Logo removed and navigation labels saved.');
   setBusy(false);
  };
  const imageUrl=value.logo_path?supabase.storage.from('homepage-media').getPublicUrl(value.logo_path).data.publicUrl:'';
- const update=(key:keyof BrandingSettingsValue,next:string)=>setValue(current=>({...current,[key]:next}));
+ const update=(key:'home'|'shop'|'about'|'account',next:string)=>setValue(current=>({...current,labels:{...current.labels,[locale]:{...current.labels[locale],[key]:next}}}));
+ const updateFont=(next:string)=>setValue(current=>({...current,nav_font_family:next}));
  return <section className="max-w-3xl space-y-5">
   <div><h2 className="text-lg font-semibold">Logo & Navigation Labels</h2><p className="text-sm text-slate-500 mt-1">These labels are shared by desktop and mobile storefront navigation.</p></div>
   <div className="bg-white border rounded-xl p-5 space-y-4">
@@ -68,9 +71,9 @@ export const BrandingSettings:React.FC=()=>{
     <label className="text-sm underline cursor-pointer">Choose logo<input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={e=>setFile(e.target.files?.[0]||null)}/></label>
     {(value.logo_path||file)&&<button type="button" onClick={removeLogo} disabled={busy} className="text-sm text-red-600 underline disabled:opacity-50">Remove logo</button>}
    </div>
-   <div className="border-t pt-4 space-y-3"><h3 className="font-medium">Navigation Labels</h3>
-    {([['home_label','Home'],['shop_label','Shop'],['about_label','About'],['account_label','Account']] as const).map(([key,label])=><label key={key} className="grid gap-1 text-sm">{label}<input maxLength={32} value={value[key]} onChange={e=>update(key,e.target.value)} className="border rounded-lg p-2"/></label>)}
-    <label className="grid gap-1 text-sm">Navigation Font<select value={value.nav_font_family} onChange={e=>update('nav_font_family',e.target.value)} className="border rounded-lg p-2"><option value="inherit">Use Storefront Font</option><option value="Arial, sans-serif">Arial · Sans Serif</option><option value="Georgia, serif">Georgia · Serif</option><option value="Times New Roman, serif">Times New Roman · Serif</option><option value="system-ui, sans-serif">System UI · Sans Serif</option></select></label>
+   <div className="border-t pt-4 space-y-3"><h3 className="font-medium">Navigation Labels</h3><div className="flex gap-2"><button type="button" onClick={()=>setLocale('en')} className={'rounded-lg border px-3 py-2 text-sm '+(locale==='en'?'bg-slate-900 text-white':'')}>English</button><button type="button" onClick={()=>setLocale('zh')} className={'rounded-lg border px-3 py-2 text-sm '+(locale==='zh'?'bg-slate-900 text-white':'')}>简体中文</button></div>
+    {([['home','Home'],['shop','Shop'],['about','About'],['account','Account']] as const).map(([key,label])=><label key={key} className="grid gap-1 text-sm">{label}<input maxLength={32} value={value.labels[locale][key]} onChange={e=>update(key,e.target.value)} className="border rounded-lg p-2"/></label>)}
+    <label className="grid gap-1 text-sm">Navigation Font<select value={value.nav_font_family} onChange={e=>updateFont(e.target.value)} className="border rounded-lg p-2"><option value="inherit">Use Storefront Font</option><option value="Arial, sans-serif">Arial · Sans Serif</option><option value="Georgia, serif">Georgia · Serif</option><option value="Times New Roman, serif">Times New Roman · Serif</option><option value="system-ui, sans-serif">System UI · Sans Serif</option></select></label>
    </div>
    {error&&<p role="alert" className="text-sm text-red-600">{error}</p>}
    {message&&<p role="status" className="text-sm text-emerald-700">{message}</p>}
