@@ -18,7 +18,7 @@ export const Footer: React.FC<FooterProps> = ({ selectedCurrency, onCurrencyChan
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
         {/* 语言切换器 */}
         <div className="flex items-center space-x-4">
-          <span className="font-medium">Language:</span>
+          <span className="font-medium">{lang==='zh'?'语言：':'Language:'}</span>
           <button
             onClick={() => setLang('en')}
             className={`px-3 py-1 rounded transition-all ${lang === 'en' ? 'bg-black text-white font-bold' : 'bg-white border border-gray-300 hover:bg-gray-50'}`}
@@ -35,7 +35,7 @@ export const Footer: React.FC<FooterProps> = ({ selectedCurrency, onCurrencyChan
 
         {/* 货币选择器 */}
         <div className="flex items-center space-x-3">
-          <span className="font-medium">Currency:</span>
+          <span className="font-medium">{lang==='zh'?'货币：':'Currency:'}</span>
           <select
             value={selectedCurrency}
             onChange={(e) => onCurrencyChange(e.target.value)}
