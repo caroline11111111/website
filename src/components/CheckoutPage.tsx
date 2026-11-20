@@ -3,6 +3,7 @@ import {useAuth} from '../context/AuthContext';
 import {useCart} from '../context/CartContext';
 import {useCurrency} from '../context/CurrencyContext';
 import {supabase} from '../lib/supabase';
+import {useLanguage} from '../context/LanguageContext';
 interface CheckoutPageProps{selectedCurrency:string;selectedItemIds:string[];onOrderComplete:()=>void;}
 const MALAYSIA_REGIONS=[{code:'JHR',name:'Johor'},{code:'KDH',name:'Kedah'},{code:'KTN',name:'Kelantan'},{code:'MLK',name:'Melaka'},{code:'NSN',name:'Negeri Sembilan'},{code:'PHG',name:'Pahang'},{code:'PNG',name:'Penang'},{code:'PRK',name:'Perak'},{code:'PLS',name:'Perlis'},{code:'SGR',name:'Selangor'},{code:'TRG',name:'Terengganu'},{code:'KUL',name:'Kuala Lumpur'},{code:'LBN',name:'Labuan'},{code:'PJY',name:'Putrajaya'},{code:'SBH',name:'Sabah'},{code:'SWK',name:'Sarawak'}];
 const normalizeMalaysiaRegion=(value:string)=>{const v=(value||'').trim().toLowerCase();const found=MALAYSIA_REGIONS.find(x=>x.code.toLowerCase()===v||x.name.toLowerCase()===v||(x.name==='Penang'&&v==='pulau pinang'));return found?.code||value;};
@@ -33,7 +34,7 @@ const explainCheckoutError=(message:string,proofUploaded:boolean):string=>{
   : `Order was not created. ${explanation}`;
 };
 export const CheckoutPage:React.FC<CheckoutPageProps>=({selectedCurrency,selectedItemIds,onOrderComplete})=>{
- const{formatPrice,convertFromMYR}=useCurrency();const{user}=useAuth();const{items,refresh}=useCart();
+ const{formatPrice,convertFromMYR}=useCurrency(); const{language}=useLanguage(); const zh=language==='zh';const{user}=useAuth();const{items,refresh}=useCart();
  const[recipientName,setRecipientName]=useState(user?.name||'');const[phone,setPhone]=useState(user?.phone||'');
  const[line1,setLine1]=useState('');const[line2,setLine2]=useState('');const[city,setCity]=useState('');
  const[region,setRegion]=useState('');const[postal,setPostal]=useState('');const[country,setCountry]=useState('MY');
@@ -82,34 +83,34 @@ export const CheckoutPage:React.FC<CheckoutPageProps>=({selectedCurrency,selecte
    setError(explainCheckoutError(message,Boolean(proofPathForAttempt)));
   }finally{setBusy(false);}
  };
- if(!user)return <div className="max-w-2xl mx-auto px-6 py-16 text-center">Please sign in to continue checkout.</div>;
- return <div className="w-full max-w-3xl mx-auto px-6 py-12"><h1 className="text-3xl font-light mb-8">Checkout</h1><form onSubmit={submit} className="space-y-6 bg-white p-8 rounded-lg border shadow-sm">
-  <section className="space-y-4"><h2 className="font-semibold">Recipient Details</h2>
-   <label className="block text-sm">Recipient Name<input required value={recipientName} onChange={e=>setRecipientName(e.target.value)} className="mt-1 w-full border rounded p-3"/></label>
-   <label className="block text-sm">Phone Number<input required value={phone} onChange={e=>setPhone(e.target.value)} className="mt-1 w-full border rounded p-3"/></label>
+ if(!user)return <div className="max-w-2xl mx-auto px-6 py-16 text-center">{zh?'请先登录以继续结账。':'Please sign in to continue checkout.'}</div>;
+ return <div className="w-full max-w-3xl mx-auto px-6 py-12"><h1 className="text-3xl font-light mb-8">{zh?'结账':'Checkout'}</h1><form onSubmit={submit} className="space-y-6 bg-white p-8 rounded-lg border shadow-sm">
+  <section className="space-y-4"><h2 className="font-semibold">{zh?'收件人资料':'Recipient Details'}</h2>
+   <label className="block text-sm">{zh?'收件人姓名':'Recipient Name'}<input required value={recipientName} onChange={e=>setRecipientName(e.target.value)} className="mt-1 w-full border rounded p-3"/></label>
+   <label className="block text-sm">{zh?'电话号码':'Phone Number'}<input required value={phone} onChange={e=>setPhone(e.target.value)} className="mt-1 w-full border rounded p-3"/></label>
   </section>
-  <section className="space-y-4 border-t pt-5"><h2 className="font-semibold">Shipping Address</h2>
-   <label className="block text-sm">Address Line 1<input required value={line1} onChange={e=>setLine1(e.target.value)} className="mt-1 w-full border rounded p-3"/></label>
-   <label className="block text-sm">Address Line 2<input value={line2} onChange={e=>setLine2(e.target.value)} className="mt-1 w-full border rounded p-3"/></label>
+  <section className="space-y-4 border-t pt-5"><h2 className="font-semibold">{zh?'收货地址':'Shipping Address'}</h2>
+   <label className="block text-sm">{zh?'地址第一行':'Address Line 1'}<input required value={line1} onChange={e=>setLine1(e.target.value)} className="mt-1 w-full border rounded p-3"/></label>
+   <label className="block text-sm">{zh?'地址第二行':'Address Line 2'}<input value={line2} onChange={e=>setLine2(e.target.value)} className="mt-1 w-full border rounded p-3"/></label>
    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-    <label className="block text-sm">City<input required value={city} onChange={e=>setCity(e.target.value)} className="mt-1 w-full border rounded p-3"/></label>
-    <label className="block text-sm">State / Region{country.trim().toUpperCase()==='MY'?<select required value={region} onChange={e=>setRegion(e.target.value)} className="mt-1 w-full border rounded p-3"><option value="">Select state / region</option>{MALAYSIA_REGIONS.map(x=><option key={x.code} value={x.code}>{x.name}</option>)}</select>:<input value={region} onChange={e=>setRegion(e.target.value)} placeholder="Enter state / region" className="mt-1 w-full border rounded p-3"/>}</label>
-    <label className="block text-sm">Postal Code<input value={postal} onChange={e=>setPostal(e.target.value)} className="mt-1 w-full border rounded p-3"/></label>
-    <label className="block text-sm">Country Code<input required maxLength={2} value={country} onChange={e=>setCountry(e.target.value.toUpperCase())} className="mt-1 w-full border rounded p-3"/></label>
+    <label className="block text-sm">{zh?'城市':'City'}<input required value={city} onChange={e=>setCity(e.target.value)} className="mt-1 w-full border rounded p-3"/></label>
+    <label className="block text-sm">{zh?'州属／地区':'State / Region'}{country.trim().toUpperCase()==='MY'?<select required value={region} onChange={e=>setRegion(e.target.value)} className="mt-1 w-full border rounded p-3"><option value="">{zh?'选择州属／地区':'Select state / region'}</option>{MALAYSIA_REGIONS.map(x=><option key={x.code} value={x.code}>{x.name}</option>)}</select>:<input value={region} onChange={e=>setRegion(e.target.value)} placeholder={zh?'输入州属／地区':'Enter state / region'} className="mt-1 w-full border rounded p-3"/>}</label>
+    <label className="block text-sm">{zh?'邮政编码':'Postal Code'}<input value={postal} onChange={e=>setPostal(e.target.value)} className="mt-1 w-full border rounded p-3"/></label>
+    <label className="block text-sm">{zh?'国家代码':'Country Code'}<input required maxLength={2} value={country} onChange={e=>setCountry(e.target.value.toUpperCase())} className="mt-1 w-full border rounded p-3"/></label>
    </div>
   </section>
-  <section className="space-y-3 border-t pt-5"><h2 className="font-semibold">Bank Transfer via WhatsApp · {selectedCurrency}</h2><p className="text-sm text-gray-600">Please contact our customer service on WhatsApp to receive the bank account details for your selected currency. Our team will assist you with the transfer before you submit your payment receipt.</p><a href={`https://wa.me/${whatsappPhone.replace(/\D/g,'')}?text=${encodeURIComponent(`Hi, I would like to request bank transfer details for my ${selectedCurrency} checkout.`)}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center rounded-full bg-[#25D366] px-6 py-3 text-sm font-medium text-white hover:opacity-90">Get Bank Details on WhatsApp</a></section>
-  <section className="space-y-3 border-t pt-5"><h2 className="font-semibold">Payment Proof</h2><p className="text-xs text-gray-500">Upload your payment receipt (JPG, PNG, or PDF; maximum 5MB). Uploading a receipt does not confirm payment. Our team will review it manually.</p><input type="file" required accept="image/jpeg,image/png,application/pdf" onChange={e=>{setFile(e.target.files?.[0]||null);setUploadedProofPath(null);setIdempotencyKey(null);setError('');}} className="block w-full text-sm"/>{uploadedProofPath&&<p className="text-xs text-green-700">Payment receipt uploaded and retained for this checkout attempt. It will not be uploaded again when you retry.</p>}</section>
-  <section className="border-t pt-5 space-y-3"><h2 className="font-semibold">Selected Items</h2>
+  <section className="space-y-3 border-t pt-5"><h2 className="font-semibold">{zh?'通过 WhatsApp 获取银行转账资料':'Bank Transfer via WhatsApp'} · {selectedCurrency}</h2><p className="text-sm text-gray-600">{zh?'请通过 WhatsApp 联系客服，获取所选货币的银行账户资料。我们的团队会协助您完成转账，然后再提交付款凭证。':'Please contact our customer service on WhatsApp to receive the bank account details for your selected currency. Our team will assist you with the transfer before you submit your payment receipt.'}</p><a href={`https://wa.me/${whatsappPhone.replace(/\D/g,'')}?text=${encodeURIComponent(`Hi, I would like to request bank transfer details for my ${selectedCurrency} checkout.`)}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center rounded-full bg-[#25D366] px-6 py-3 text-sm font-medium text-white hover:opacity-90">{zh?'通过 WhatsApp 获取银行资料':'Get Bank Details on WhatsApp'}</a></section>
+  <section className="space-y-3 border-t pt-5"><h2 className="font-semibold">{zh?'付款凭证':'Payment Proof'}</h2><p className="text-xs text-gray-500">{zh?'上传付款收据（JPG、PNG 或 PDF；最大 5MB）。上传收据不代表付款已获确认，团队将进行人工审核。':'Upload your payment receipt (JPG, PNG, or PDF; maximum 5MB). Uploading a receipt does not confirm payment. Our team will review it manually.'}</p><input type="file" required accept="image/jpeg,image/png,application/pdf" onChange={e=>{setFile(e.target.files?.[0]||null);setUploadedProofPath(null);setIdempotencyKey(null);setError('');}} className="block w-full text-sm"/>{uploadedProofPath&&<p className="text-xs text-green-700">Payment receipt uploaded and retained for this checkout attempt. It will not be uploaded again when you retry.</p>}</section>
+  <section className="border-t pt-5 space-y-3"><h2 className="font-semibold">{zh?'已选商品':'Selected Items'}</h2>
    {selected.map(i=><div key={i.id} className="flex justify-between text-sm"><span>{i.name} × {i.quantity}</span><span>{convertFromMYR(i.priceMYR,selectedCurrency)!==null?formatPrice((convertFromMYR(i.priceMYR,selectedCurrency)||0)*i.quantity,selectedCurrency):'Price not configured'}</span></div>)}
-   <div className="border-t pt-3 flex justify-between font-semibold"><span>Subtotal</span><span>{quote?formatPrice(Number(quote.subtotal),selectedCurrency):hasAllPrices?formatPrice(subtotal,selectedCurrency):'Price not configured'}</span></div>
-   <div className="flex justify-between text-sm"><span>Shipping</span><span>{quote?formatPrice(Number(quote.shipping_fee),selectedCurrency):'—'}</span></div>
-   <div className="flex justify-between font-bold text-lg"><span>Total</span><span>{quote?formatPrice(Number(quote.total),selectedCurrency):'—'}</span></div>
+   <div className="border-t pt-3 flex justify-between font-semibold"><span>{zh?'商品小计':'Subtotal'}</span><span>{quote?formatPrice(Number(quote.subtotal),selectedCurrency):hasAllPrices?formatPrice(subtotal,selectedCurrency):'Price not configured'}</span></div>
+   <div className="flex justify-between text-sm"><span>{zh?'运费':'Shipping'}</span><span>{quote?formatPrice(Number(quote.shipping_fee),selectedCurrency):'—'}</span></div>
+   <div className="flex justify-between font-bold text-lg"><span>{zh?'总计':'Total'}</span><span>{quote?formatPrice(Number(quote.total),selectedCurrency):'—'}</span></div>
    {quoteError&&<p className="text-xs text-red-600">{quoteError}</p>}
-   <p className="text-xs text-gray-500">If the price or shipping changes, you will need to review the updated quote and confirm again.</p>
+   <p className="text-xs text-gray-500">{zh?'如商品价格或运费发生变化，您需要重新检查报价并确认。':'If the price or shipping changes, you will need to review the updated quote and confirm again.'}</p>
   </section>
   {!hasAllPrices&&<p role="status" className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded p-3">One or more selected products cannot be priced in {selectedCurrency}. Please check that the currency is active and its exchange rate is configured.</p>}{error&&<p role="alert" className="text-sm text-red-600">{error}</p>}
-  <button type="submit" disabled={busy||!selected.length||!hasAllPrices||!quote||!whatsappPhone.replace(/\D/g,'')} className="w-full py-4 bg-black text-white rounded-full disabled:opacity-50">{busy?'Submitting Order…':'Submit Order with Payment Proof'}</button>
+  <button type="submit" disabled={busy||!selected.length||!hasAllPrices||!quote||!whatsappPhone.replace(/\D/g,'')} className="w-full py-4 bg-black text-white rounded-full disabled:opacity-50">{busy?(zh?'正在提交订单…':'Submitting Order…'):(zh?'提交订单及付款凭证':'Submit Order with Payment Proof')}</button>
  </form></div>;
 };
 export default CheckoutPage;
