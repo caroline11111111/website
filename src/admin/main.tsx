@@ -5,7 +5,7 @@ import { ThemeProvider } from '../context/ThemeContext';
 import '../index.css';
 import { applySiteFavicon } from '../lib/siteFavicon';
 
-void applySiteFavicon();
+void applySiteFavicon('admin');
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
