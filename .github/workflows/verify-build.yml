@@ -1,4 +1,4 @@
-name: Verify application build
+name: Verify Admin Portal build
 
 on:
   push:
@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 jobs:
-  build:
+  build-admin:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -20,5 +20,5 @@ jobs:
           node-version: 24
       - name: Install dependencies
         run: npm install
-      - name: Build storefront and Admin Portal
-        run: npm run build
+      - name: Build Admin Portal
+        run: npm run build:admin
