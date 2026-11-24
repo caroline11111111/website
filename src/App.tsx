@@ -60,7 +60,7 @@ export function App() {
               onChange={(e) => setSelectedCurrency(e.target.value)}
               className="bg-transparent text-xs font-semibold uppercase border border-gray-300 rounded px-2 py-1 focus:outline-none cursor-pointer"
             >
-              {currencies.map((c) => (
+              {Object.values(currencies).map((c) => (
                 <option key={c.code} value={c.code}>
                   {c.code} ({c.symbol})
                 </option>
