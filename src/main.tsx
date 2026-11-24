@@ -8,7 +8,7 @@ import {ThemeProvider} from './context/ThemeContext';
 import {CurrencyProvider} from './context/CurrencyContext';
 import './index.css';
 import {applySiteFavicon} from './lib/siteFavicon';
-void applySiteFavicon();
+void applySiteFavicon('storefront');
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
  <React.StrictMode><AuthProvider><LanguageProvider><ThemeProvider><CurrencyProvider><CartProvider><App/></CartProvider></CurrencyProvider></ThemeProvider></LanguageProvider></AuthProvider></React.StrictMode>
 );
