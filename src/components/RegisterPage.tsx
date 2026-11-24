@@ -21,11 +21,11 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onRegisterSuccess, o
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const success = register({ name, email, phone, address, password });
-    if (success) {
+    try {
+      register(name, email, password, phone);
       onRegisterSuccess();
-    } else {
-      setError(translations.emailAlreadyRegistered || 'Email already registered');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : (translations.emailAlreadyRegistered || 'Email already registered'));
     }
   };
 
