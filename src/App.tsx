@@ -14,7 +14,7 @@ import { CheckoutPage } from './components/CheckoutPage';
 import { AccountPage } from './components/AccountPage';
 import { MyOrderPage } from './components/MyOrderPage'; // 修改点 1：引入正确的 MyOrderPage
 import { LoginPage } from './components/LoginPage';
-import { SignUpPage } from './components/SignUpPage';
+import { RegisterPage } from './components/RegisterPage';
 
 export function App() {
   // 页面导航状态
@@ -173,9 +173,9 @@ export function App() {
         )}
 
         {currentTab === 'signup' && (
-          <SignUpPage
-            onSuccess={() => setCurrentTab('account')}
-            onGoLogin={() => setCurrentTab('login')}
+          <RegisterPage
+            onRegisterSuccess={() => setCurrentTab('account')}
+            onNavigateLogin={() => setCurrentTab('login')}
           />
         )}
       </main>
