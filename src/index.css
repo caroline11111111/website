@@ -63,3 +63,55 @@ body {
 #root .text-white {
   color: var(--theme-button-text) !important;
 }
+
+
+/* Admin uses the same live theme tokens as the storefront, with readable button contrast. */
+.admin-theme {
+  background-color: var(--theme-background);
+  color: var(--theme-text-primary);
+}
+.admin-theme .bg-white,
+.admin-theme .bg-slate-50,
+.admin-theme .bg-slate-100 {
+  background-color: var(--theme-surface) !important;
+}
+.admin-theme .bg-slate-900,
+.admin-theme .bg-black {
+  background-color: var(--theme-button-primary) !important;
+  color: var(--theme-button-text) !important;
+}
+.admin-theme button.bg-slate-900,
+.admin-theme button.bg-black,
+.admin-theme button.text-white {
+  color: var(--theme-button-text) !important;
+}
+.admin-theme .text-slate-900,
+.admin-theme .text-slate-800,
+.admin-theme .text-slate-700,
+.admin-theme .text-black {
+  color: var(--theme-text-primary) !important;
+}
+.admin-theme .text-slate-600,
+.admin-theme .text-slate-500,
+.admin-theme .text-slate-400 {
+  color: var(--theme-text-secondary) !important;
+}
+.admin-theme .border,
+.admin-theme .border-t,
+.admin-theme .border-b,
+.admin-theme .border-slate-100,
+.admin-theme .border-slate-200,
+.admin-theme .border-slate-300 {
+  border-color: var(--theme-border) !important;
+}
+.admin-theme button.bg-slate-900:hover,
+.admin-theme button.bg-black:hover {
+  background-color: var(--theme-button-hover) !important;
+}
+.admin-theme button:not(:disabled):focus-visible,
+.admin-theme input:focus-visible,
+.admin-theme select:focus-visible,
+.admin-theme textarea:focus-visible {
+  outline: 2px solid var(--theme-accent);
+  outline-offset: 2px;
+}
