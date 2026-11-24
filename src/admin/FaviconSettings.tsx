@@ -80,7 +80,7 @@ export function FaviconSettings({ userId, scope }: { userId: string; scope: Favi
     const { data: publicData } = supabase.storage.from('homepage-media').getPublicUrl(path);
     setPreviewUrl(publicData.publicUrl);
     setFile(null);
-    setNotice('{scope === 'storefront' ? 'Storefront' : 'Admin'} favicon updated. Refresh that site tab to see the new icon.');
+    setNotice(`${scope === 'storefront' ? 'Storefront' : 'Admin'} favicon updated. Refresh that site tab to see the new icon.`);
     setBusy(false);
     await applySiteFavicon(scope);
   };
@@ -91,7 +91,7 @@ export function FaviconSettings({ userId, scope }: { userId: string; scope: Favi
     setNotice('');
     setBusy(true);
     const { error: saveError } = await supabase.from('site_settings').upsert({
-      setting_key: 'storefront_favicon',
+      setting_key: settingKey,
       setting_value: { storage_path: null, mime_type: null },
       updated_by: userId,
     }, { onConflict: 'setting_key' });
@@ -105,8 +105,8 @@ export function FaviconSettings({ userId, scope }: { userId: string; scope: Favi
     setPreviewUrl('');
     setBusy(false);
     if (removeError) setError(`The default favicon is restored, but the old file could not be removed: ${removeError.message}`);
-    else setNotice('Custom {scope === 'storefront' ? 'storefront' : 'Admin'} favicon removed. The default icon is now active.');
-    await applySiteFavicon();
+    else setNotice(`Custom ${scope === 'storefront' ? 'storefront' : 'Admin'} favicon removed. The default icon is now active.`);
+    await applySiteFavicon(scope);
   };
 
   return (
