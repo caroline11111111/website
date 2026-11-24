@@ -1,122 +1,120 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { orderService, Order } from '../services/orderService';
-import { formatPrice } from '../config/currencies';
-import { SiteImage } from './SiteImage';
+import React,{useEffect,useState} from 'react';
+import {useAuth} from '../context/AuthContext';
+import {supabase} from '../lib/supabase';
+import {useTheme,themeToCssVars} from '../context/ThemeContext';
+import {useLanguage} from '../context/LanguageContext';
 
-interface AccountPageProps {
-  initialSubTab?: string;
-  selectedCurrency: string;
-}
+interface AccountPageProps{initialSubTab?:string;selectedCurrency:string;onGoOrders:()=>void;}
+type AddressRow={id:string;recipient_name:string;phone:string;address_line_1:string;address_line_2:string|null;city:string;state_region:string|null;postal_code:string|null;country_code:string;};
 
-export const AccountPage: React.FC<AccountPageProps> = ({ initialSubTab = 'profile', selectedCurrency }) => {
-  const { user, logout } = useAuth();
-  const [subTab, setSubTab] = useState<string>(initialSubTab);
-  const [orders, setOrders] = useState<Order[]>([]);
+export const AccountPage:React.FC<AccountPageProps>=({onGoOrders})=>{
+ const{user,logout}=useAuth();
+ const[name,setName]=useState(user?.name||'');
+ const[phone,setPhone]=useState(user?.phone||'');
+ const[addressLine1,setAddressLine1]=useState('');
+ const[addressLine2,setAddressLine2]=useState('');
+ const[city,setCity]=useState('');
+ const[region,setRegion]=useState('');
+ const[postalCode,setPostalCode]=useState('');
+ const[countryCode,setCountryCode]=useState('MY');
+ const[defaultAddressId,setDefaultAddressId]=useState<string|null>(null);
+ const[busy,setBusy]=useState(false);
+ const[message,setMessage]=useState('');
+ const[error,setError]=useState('');
+ const{currentTheme}=useTheme(); const{language}=useLanguage(); const zh=language==='zh';
 
-  useEffect(() => {
-    setSubTab(initialSubTab);
-  }, [initialSubTab]);
+ useEffect(()=>{
+  if(!user)return;
+  let alive=true;
+  Promise.all([
+   supabase.from('profiles').select('display_name,phone,whatsapp').eq('id',user.id).maybeSingle(),
+   supabase.from('customer_addresses').select('id,recipient_name,phone,address_line_1,address_line_2,city,state_region,postal_code,country_code').eq('user_id',user.id).eq('is_default',true).maybeSingle()
+  ]).then(([profileResult,addressResult])=>{
+   if(!alive)return;
+   if(profileResult.error)setError(profileResult.error.message);
+   else if(profileResult.data){setName(profileResult.data.display_name||user.name||'');setPhone(profileResult.data.phone||profileResult.data.whatsapp||user.phone||'');}
+   if(addressResult.error)setError(addressResult.error.message);
+   else if(addressResult.data){
+    const row=addressResult.data as AddressRow;
+    setDefaultAddressId(row.id);setAddressLine1(row.address_line_1||'');setAddressLine2(row.address_line_2||'');
+    setCity(row.city||'');setRegion(row.state_region||'');setPostalCode(row.postal_code||'');setCountryCode(row.country_code||'MY');
+   }else{setAddressLine1((user as typeof user & {address?:string}).address||'');}
+  });
+  return()=>{alive=false;};
+ },[user?.id]);
 
-  // 每次切换到 order 标签时强行拉取 ccc_orders_list 缓存
-  useEffect(() => {
-    if (subTab === 'order') {
-      const fetched = orderService.getOrders();
-      setOrders(fetched);
-    }
-  }, [subTab]);
+ const save=async(e:React.FormEvent)=>{
+  e.preventDefault();if(!user)return;
+  const hasAddress=[addressLine1,addressLine2,city,region,postalCode].some(value=>value.trim()!=='');
+  if(hasAddress&&(!addressLine1.trim()||!city.trim()||!name.trim()||!phone.trim()||!/^[A-Z]{2}$/.test(countryCode.trim().toUpperCase()))){
+   setError('Please enter your name, phone number, Address Line 1, City and a valid two-letter Country Code before saving your delivery address.');return;
+  }
+  setBusy(true);setMessage('');setError('');
+  const[{error:profileError},{error:authError}]=await Promise.all([
+   supabase.from('profiles').update({display_name:name.trim(),phone:phone.trim(),whatsapp:phone.trim()}).eq('id',user.id),
+   supabase.auth.updateUser({data:{full_name:name.trim(),phone:phone.trim()}})
+  ]);
+  if(profileError||authError){setError(profileError?.message||authError?.message||'Unable to save profile.');setBusy(false);return;}
+  if(!hasAddress&&defaultAddressId){
+   const{error:clearAddressError}=await supabase.from('customer_addresses').update({is_default:false}).eq('id',defaultAddressId).eq('user_id',user.id);
+   if(clearAddressError){setError('Profile saved, but the default address could not be cleared: '+clearAddressError.message);setBusy(false);return;}
+   setDefaultAddressId(null);
+  }
+  if(hasAddress){
+   const payload={user_id:user.id,recipient_name:name.trim(),phone:phone.trim(),address_line_1:addressLine1.trim(),address_line_2:addressLine2.trim()||null,city:city.trim(),state_region:region.trim()||null,postal_code:postalCode.trim()||null,country_code:countryCode.trim().toUpperCase(),is_default:true};
+   let addressError:null|string=null;
+   if(defaultAddressId){
+    const result=await supabase.from('customer_addresses').update(payload).eq('id',defaultAddressId).eq('user_id',user.id);
+    addressError=result.error?.message||null;
+   }else{
+    const result=await supabase.from('customer_addresses').insert(payload).select('id').single();
+    addressError=result.error?.message||null;
+    if(result.data?.id)setDefaultAddressId(result.data.id);
+   }
+   if(addressError){setError('Profile saved, but the delivery address could not be saved: '+addressError);setBusy(false);return;}
+  }
+  setMessage(hasAddress?'Profile and default delivery address saved successfully.':'Profile saved successfully.');setBusy(false);
+ };
 
-  return (
-    <div className="w-full max-w-5xl mx-auto px-6 py-12 space-y-8">
-      <div className="flex justify-between items-center border-b pb-6">
-        <h1 className="text-3xl font-light">My Account</h1>
-        {user && (
-          <button
-            onClick={logout}
-            className="text-xs uppercase tracking-wider text-red-600 hover:underline font-semibold"
-          >
-            Sign Out
-          </button>
-        )}
-      </div>
-
-      <div className="flex space-x-6 border-b border-gray-200 pb-3 text-xs uppercase tracking-widest font-semibold">
-        <button
-          onClick={() => setSubTab('profile')}
-          className={`pb-2 border-b-2 ${
-            subTab === 'profile' ? 'border-black text-black' : 'border-transparent text-gray-400'
-          }`}
-        >
-          Profile
-        </button>
-        <button
-          onClick={() => {
-            setSubTab('order');
-            setOrders(orderService.getOrders());
-          }}
-          className={`pb-2 border-b-2 ${
-            subTab === 'order' ? 'border-black text-black' : 'border-transparent text-gray-400'
-          }`}
-        >
-          My Order
-        </button>
-      </div>
-
-      {subTab === 'profile' && (
-        <div className="bg-white p-6 rounded-lg border border-gray-200 max-w-md space-y-2 text-sm shadow-sm">
-          <p><span className="font-semibold text-black">Name:</span> {user?.name || 'Guest User'}</p>
-          <p><span className="font-semibold text-black">Email:</span> {user?.email || 'guest@example.com'}</p>
-          <p><span className="font-semibold text-black">Address:</span> {user?.address || 'Malaysia'}</p>
-        </div>
-      )}
-
-      {subTab === 'order' && (
-        <div className="space-y-6">
-          <h2 className="text-lg font-medium">Order History ({orders.length})</h2>
-          {orders.length === 0 ? (
-            <div className="text-center py-16 bg-white rounded-lg border border-gray-200 text-gray-400 text-sm shadow-sm">
-              No orders found yet. Complete a checkout to see your orders here.
-            </div>
-          ) : (
-            orders.map((order) => (
-              <div key={order.id} className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm space-y-4">
-                <div className="flex flex-wrap justify-between items-center text-xs text-gray-500 border-b pb-3">
-                  <span>Order ID: <strong className="text-black">{order.id}</strong></span>
-                  <span>Date: {new Date(order.createdAt).toLocaleDateString()}</span>
-                  <span className="px-2.5 py-1 bg-green-50 text-green-700 rounded font-semibold uppercase">{order.status}</span>
-                </div>
-
-                <div className="space-y-3">
-                  {order.items.map((item, idx) => (
-                    <div key={idx} className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
-                        <div className="w-14 h-14 bg-gray-100 rounded overflow-hidden flex-shrink-0">
-                          <SiteImage src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-400 uppercase">{item.brand}</p>
-                          <h4 className="text-sm font-medium text-gray-800">{item.name}</h4>
-                          <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
-                        </div>
-                      </div>
-                      <span className="text-sm font-bold text-black">
-                        {formatPrice(item.priceMYR * item.quantity, selectedCurrency)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="border-t pt-3 flex justify-between items-center text-sm font-bold">
-                  <span>Total Amount:</span>
-                  <span className="text-base">{formatPrice(order.totalPriceMYR, selectedCurrency)}</span>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      )}
+ const fieldStyle={backgroundColor:'var(--theme-input-background)',borderColor:'var(--theme-input-border)',color:'var(--theme-text-primary)'};
+ if(!user)return <div className="py-16 text-center" style={{...themeToCssVars(currentTheme),backgroundColor:'var(--theme-background)',color:'var(--theme-text-primary)'}}>Please sign in to view your account.</div>;
+ return <div className="w-full max-w-3xl mx-auto px-6 py-12 space-y-8" style={{...themeToCssVars(currentTheme),backgroundColor:'var(--theme-background)',color:'var(--theme-text-primary)'}}>
+  <div className="flex justify-between items-center border-b pb-6" style={{borderColor:'var(--theme-border)'}}>
+   <h1 className="text-3xl font-light">{zh?'我的账户':'My Account'}</h1>
+   <button onClick={()=>void logout()} className="text-xs underline" style={{color:'var(--theme-secondary)'}}>{zh?'登出':'Sign Out'}</button>
+  </div>
+  <div className="flex flex-wrap gap-3">
+   <button type="button" onClick={onGoOrders} className="px-6 py-3 rounded-full text-xs border" style={{borderColor:'var(--theme-border)',color:'var(--theme-secondary)'}}>{zh?'我的订单':'My Orders'}</button>
+  </div>
+  <form onSubmit={save} className="p-6 rounded-lg border max-w-xl space-y-4" style={{backgroundColor:'var(--theme-surface)',borderColor:'var(--theme-border)'}}>
+   <h2 className="font-semibold">{zh?'个人资料':'Profile Information'}</h2>
+   <p className="text-sm" style={{color:'var(--theme-text-secondary)'}}>{zh?'电子邮箱：':'Email: '}{user.email}</p>
+   <label className="block text-sm">{zh?'姓名':'Full Name'}
+    <input value={name} onChange={e=>setName(e.target.value)} required className="mt-1 w-full rounded p-3 border outline-none" style={fieldStyle}/>
+   </label>
+   <label className="block text-sm">{zh?'电话号码':'Phone Number'}
+    <input value={phone} onChange={e=>setPhone(e.target.value)} className="mt-1 w-full rounded p-3 border outline-none" style={fieldStyle}/>
+   </label>
+   <div className="border-t pt-4 space-y-3">
+    <h3 className="font-semibold">{zh?'默认收货地址':'Default Delivery Address'}</h3>
+    <p className="text-xs" style={{color:'var(--theme-text-secondary)'}}>{zh?'此地址将在结账时自动填写。如暂时不想保存收货地址，请将所有地址栏留空。':'This address will be filled in automatically at Checkout. Leave all address fields blank if you do not want to save a delivery address yet.'}</p>
+    <label className="block text-sm">{zh?'地址第一行':'Address Line 1'}
+     <input value={addressLine1} onChange={e=>setAddressLine1(e.target.value)} className="mt-1 w-full rounded p-3 border outline-none" style={fieldStyle}/>
+    </label>
+    <label className="block text-sm">{zh?'地址第二行':'Address Line 2'}
+     <input value={addressLine2} onChange={e=>setAddressLine2(e.target.value)} className="mt-1 w-full rounded p-3 border outline-none" style={fieldStyle}/>
+    </label>
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+     <label className="block text-sm">{zh?'城市':'City'}<input value={city} onChange={e=>setCity(e.target.value)} className="mt-1 w-full rounded p-3 border outline-none" style={fieldStyle}/></label>
+     <label className="block text-sm">{zh?'州属／地区':'State / Region'}<input value={region} onChange={e=>setRegion(e.target.value)} className="mt-1 w-full rounded p-3 border outline-none" style={fieldStyle}/></label>
+     <label className="block text-sm">{zh?'邮政编码':'Postal Code'}<input value={postalCode} onChange={e=>setPostalCode(e.target.value)} className="mt-1 w-full rounded p-3 border outline-none" style={fieldStyle}/></label>
+     <label className="block text-sm">{zh?'国家代码':'Country Code'}<input maxLength={2} value={countryCode} onChange={e=>setCountryCode(e.target.value.toUpperCase())} className="mt-1 w-full rounded p-3 border outline-none" style={fieldStyle}/></label>
     </div>
-  );
+   </div>
+   {error&&<p role="alert" className="text-sm text-red-600">{error}</p>}
+   {message&&<p role="status" className="text-sm" style={{color:'var(--theme-text-secondary)'}}>{message}</p>}
+   <button disabled={busy} className="px-6 py-3 rounded-full text-xs disabled:opacity-50" style={{backgroundColor:'var(--theme-button-primary)',color:'var(--theme-button-text)'}}>{busy?'Saving…':'Save Profile & Address'}</button>
+  </form>
+ </div>;
 };
-
 export default AccountPage;

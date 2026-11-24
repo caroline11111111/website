@@ -1,96 +1,21 @@
-import React, { useState } from 'react';
-import { Product } from '../config/products';
-import { useCart } from '../context/CartContext';
-import { bagStatsService } from '../services/bagStats';
-import { formatPrice } from '../config/currencies';
-import { SiteImage } from './SiteImage';
-
-interface ProductDetailPageProps {
-  product: Product;
-  selectedCurrency: string;
-  onBack: () => void;
-  onGoBag: () => void;
-}
-
-export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, selectedCurrency, onBack, onGoBag }) => {
-  const { addToCart } = useCart();
-  const [activeImgIndex, setActiveImgIndex] = useState(0); // 记录当前选中的 P007 缩略图索引
-  const [addedCount, setAddedCount] = useState<number>(() => bagStatsService.getStats(product.id));
-
-  const handleAddToCart = () => {
-    addToCart({
-      id: `cart_${Date.now()}_${Math.random()}`,
-      productId: product.id,
-      name: product.name,
-      brand: product.brand,
-      priceMYR: product.priceMYR,
-      imageUrl: product.images[activeImgIndex]?.url || product.images[0]?.url || '',
-    });
-    bagStatsService.recordAddToCart(product.id);
-    setAddedCount(bagStatsService.getStats(product.id));
-  };
-
-  return (
-    <div className="w-full max-w-6xl mx-auto px-6 py-12 space-y-8">
-      <button onClick={onBack} className="text-sm font-medium text-gray-500 hover:text-black transition-colors">
-        &larr; Back to Shop
-      </button>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-        {/* P006 & P007 图片展示区 */}
-        <div className="space-y-4">
-          {/* P006: 主图（根据 activeImgIndex 动态显示） */}
-          <div className="h-96 md:h-[500px] bg-gray-100 rounded-lg overflow-hidden shadow-sm border border-gray-200">
-            <SiteImage
-              src={product.images[activeImgIndex]?.url || product.images[0]?.url}
-              alt={product.name}
-              className="w-full h-full object-cover transition-all duration-300"
-            />
-          </div>
-
-          {/* P007: 缩略图列表（点击切换 P006 显示） */}
-          <div className="flex space-x-3 overflow-x-auto pb-2">
-            {product.images.map((img, idx) => (
-              <button
-                key={img.id || idx}
-                onClick={() => setActiveImgIndex(idx)}
-                className={`w-20 h-20 rounded overflow-hidden border-2 flex-shrink-0 transition-all ${
-                  idx === activeImgIndex ? 'border-black ring-2 ring-black/20 opacity-100' : 'border-transparent opacity-60 hover:opacity-100'
-                }`}
-              >
-                <SiteImage src={img.url} alt={`Thumbnail ${idx + 1}`} className="w-full h-full object-cover" />
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* 商品详情面板 */}
-        <div className="space-y-6">
-          <span className="text-xs font-semibold text-gray-400 uppercase tracking-widest">{product.brand}</span>
-          <h1 className="text-3xl font-light text-gray-900">{product.name}</h1>
-          <p className="text-2xl font-bold text-black">{formatPrice(product.priceMYR, selectedCurrency)}</p>
-          <p className="text-sm text-gray-600 leading-relaxed">{product.description}</p>
-
-          <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded border border-gray-100">
-            Added to bag statistics: <span className="font-bold text-black">{addedCount}</span> times
-          </div>
-
-          <div className="pt-6 flex gap-4">
-            <button
-              onClick={handleAddToCart}
-              className="flex-grow py-4 bg-black text-white text-xs font-semibold uppercase tracking-widest rounded-full hover:bg-gray-800 transition-all shadow-md"
-            >
-              Add to Bag
-            </button>
-            <button
-              onClick={onGoBag}
-              className="px-6 py-4 border border-black text-black text-xs font-semibold uppercase tracking-widest rounded-full hover:bg-gray-50 transition-all"
-            >
-              View Bag
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+import React,{useEffect,useMemo,useState} from 'react';
+import {Product} from '../config/products';
+import {useCart} from '../context/CartContext';
+import {useAuth} from '../context/AuthContext';
+import {useCurrency} from '../context/CurrencyContext';
+import {SiteImage} from './SiteImage';
+import {supabase} from '../lib/supabase';
+import {useLanguage} from '../context/LanguageContext';
+type Variant={id:string;variant_name:string;variant_value:string;sku:string;price_myr:number;stock_quantity:number;reserved_quantity:number;weight_grams:number};
+interface ProductDetailPageProps{product:Product;selectedCurrency:string;onBack:()=>void;onGoBag:()=>void;onLogin:()=>void;}
+export const ProductDetailPage:React.FC<ProductDetailPageProps>=({product,selectedCurrency,onBack,onGoBag,onLogin})=>{
+ const{formatPrice,convertFromMYR}=useCurrency(); const{language}=useLanguage(); const zh=language==='zh';const{addToCart}=useCart();const{user}=useAuth();const[activeImgIndex,setActiveImgIndex]=useState(0);const[busy,setBusy]=useState(false);const[message,setMessage]=useState('');
+ const[variants,setVariants]=useState<Variant[]>([]);const[selectedVariantId,setSelectedVariantId]=useState('');
+ useEffect(()=>{let alive=true;supabase.from('product_variants').select('id,variant_name,variant_value,sku,price_myr,stock_quantity,reserved_quantity,weight_grams').eq('product_id',product.id).eq('is_active',true).order('display_order').then(({data,error})=>{if(!alive)return;if(error){setMessage(error.message);return;}const rows=(data||[]) as Variant[];setVariants(rows);setSelectedVariantId(rows.length===1?rows[0].id:'');});return()=>{alive=false;};},[product.id]);
+ const selectedVariant=useMemo(()=>variants.find(v=>v.id===selectedVariantId),[variants,selectedVariantId]);
+ const price=convertFromMYR(selectedVariant?Number(selectedVariant.price_myr):product.priceMYR,selectedCurrency);const priceAvailable=price!==null;
+ const available=selectedVariant?selectedVariant.stock_quantity-selectedVariant.reserved_quantity:undefined;
+ const handleAdd=async()=>{if(!user){onLogin();return;}if(variants.length&&!selectedVariant){setMessage('请选择商品规格。');return;}if(selectedVariant&&available!==undefined&&available<=0){setMessage('此规格目前已售罄。');return;}if(!selectedVariant&&Number(product.availableStock??0)<=0){setMessage('此商品目前已售罄。');return;}setBusy(true);setMessage('');try{await addToCart({id:'',productId:product.id,variantId:selectedVariant?.id||null,name:product.name+(selectedVariant?' · '+selectedVariant.variant_name+': '+selectedVariant.variant_value:''),brand:product.brand,priceMYR:selectedVariant?Number(selectedVariant.price_myr):product.priceMYR,pricesByCurrency:{MYR:selectedVariant?Number(selectedVariant.price_myr):product.priceMYR},imageUrl:product.images[activeImgIndex]?.url||product.images[0]?.url||''});setMessage('已加入购物袋。');}catch(e){setMessage(e instanceof Error?e.message:'无法加入商品。');}finally{setBusy(false);}};
+ return <div className="w-full max-w-6xl mx-auto px-6 py-12 space-y-8"><button onClick={onBack} className="text-sm text-gray-500">{zh?'← 返回商店':'← Back to Shop'}</button><div className="grid grid-cols-1 md:grid-cols-2 gap-12"><div className="space-y-4"><div className="h-96 md:h-[500px] bg-transparent rounded-lg overflow-hidden">{product.images[activeImgIndex]&&<SiteImage src={product.images[activeImgIndex].url} alt={product.name} className="w-full h-full object-cover"/>}</div><div className="flex gap-3 overflow-x-auto">{product.images.slice(0,6).map((img,i)=><button type="button" key={img.id||i} aria-label={'View product photo '+(i+1)} aria-pressed={i===activeImgIndex} onClick={()=>setActiveImgIndex(i)} className={'w-20 h-20 flex-shrink-0 overflow-hidden rounded border-2 '+(i===activeImgIndex?'border-black ring-1 ring-black':'border-gray-200 opacity-80 hover:opacity-100')}><SiteImage src={img.url} alt={product.name+' photo '+(i+1)} className="w-full h-full object-cover"/></button>)}</div></div><div className="space-y-6"><span className="text-xs text-gray-400 uppercase">{product.brand}</span><h1 className="text-3xl font-light">{product.name}</h1><p className="text-2xl font-bold">{priceAvailable?formatPrice(price,selectedCurrency):<span className="text-amber-700 text-base">Price not configured for {selectedCurrency}</span>}</p>{variants.length>0&&<label className="block text-sm">{zh?'选择规格':'Select Option'}<select value={selectedVariantId} onChange={e=>setSelectedVariantId(e.target.value)} className="mt-2 w-full border rounded-lg p-3"><option value="">{zh?'请选择规格':'Choose an option'}</option>{variants.map(v=><option key={v.id} value={v.id}>{v.variant_name}: {v.variant_value} · {v.stock_quantity-v.reserved_quantity>0?'In stock':'Sold out'}</option>)}</select></label>}{selectedVariant&&<p className="text-xs text-gray-500">SKU: {selectedVariant.sku} · Available: {Math.max(0,available||0)}</p>}{!variants.length&&<p className="text-xs text-gray-500">Available: {Math.max(0,Number(product.availableStock??0))}</p>}<p className="text-sm text-gray-600 leading-relaxed">{product.description}</p><div className="grid grid-cols-2 gap-3 text-sm border-t border-b py-4">{product.condition&&<p><span className="text-gray-500">{zh?'商品状况：':'Condition:'}</span> {product.condition}</p>}{product.color&&<p><span className="text-gray-500">{zh?'颜色：':'Colour:'}</span> {product.color}</p>}{product.sku&&<p><span className="text-gray-500">SKU:</span> {product.sku}</p>}</div>{product.specifications&&Object.keys(product.specifications).length>0&&<div className="space-y-2"><h3 className="text-sm font-semibold">{zh?'商品规格':'Specifications'}</h3>{Object.entries(product.specifications).map(([key,value])=><div key={key} className="flex justify-between gap-4 text-sm"><span className="text-gray-500">{key}</span><span>{String(value)}</span></div>)}</div>}{message&&<p role="status" className="text-sm text-slate-600">{message}</p>}<div className="pt-6 flex gap-4"><button disabled={busy||!priceAvailable||(!!selectedVariant&&available!==undefined&&available<=0)||(!variants.length&&Number(product.availableStock??0)<=0)} onClick={handleAdd} className="flex-grow py-4 bg-black text-white rounded-full disabled:opacity-50">{busy?(zh?'正在加入…':'Adding…'):user?(zh?'加入购物袋':'Add to Bag'):(zh?'登录后加入购物袋':'Sign in to Add to Bag')}</button><button onClick={onGoBag} className="px-6 py-4 border border-black rounded-full">{zh?'查看购物袋':'View Bag'}</button></div></div></div></div>;
 };
+export default ProductDetailPage;

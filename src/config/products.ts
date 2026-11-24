@@ -5,13 +5,17 @@ export interface Product {
   name: string;
   brand: string;
   category: string;
+  categories?: string[];
   condition?: string;
   color?: string;
   sku?: string;
   specifications?: Record<string, unknown>;
   priceMYR: number;
+  pricesByCurrency?: Record<string, number>;
   description: string;
   images: SiteImageItem[];
+  availableStock?: number;
+  inventoryMode?: 'single_item' | 'multiple';
 }
 
 export const mockProducts: Product[] = [

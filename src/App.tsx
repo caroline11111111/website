@@ -1,191 +1,68 @@
-import React, { useState } from 'react';
-import { useCart } from './context/CartContext';
-import { useAuth } from './context/AuthContext';
-import { Product } from './config/products';
-import { currencies } from './config/currencies';
-
-// 导入各个页面组件
-import { Banner } from './components/Banner';
-import { Slideshow } from './components/Slideshow';
-import { ShopPage } from './components/ShopPage';
-import { ProductDetailPage } from './components/ProductDetailPage';
-import { BagPage } from './components/BagPage';
-import { CheckoutPage } from './components/CheckoutPage';
-import { AccountPage } from './components/AccountPage';
-import { MyOrderPage } from './components/MyOrderPage'; // 修改点 1：引入正确的 MyOrderPage
-import { LoginPage } from './components/LoginPage';
-import { RegisterPage } from './components/RegisterPage';
-
-export function App() {
-  // 页面导航状态
-  const [currentTab, setCurrentTab] = useState<string>('home');
-  const [selectedCurrency, setSelectedCurrency] = useState<string>('MYR');
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  
-  // Account 子标签状态 ('profile' | 'order')
-  const [accountSubTab, setAccountSubTab] = useState<string>('profile');
-
-  const { items } = useCart();
-  const { user } = useAuth();
-  const totalCartCount = items.reduce((sum, i) => sum + i.quantity, 0);
-
-  const handleSelectProduct = (product: Product) => {
-    setSelectedProduct(product);
-    setCurrentTab('productDetail');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+import React,{useEffect,useState} from 'react';
+import {supabase} from './lib/supabase';
+import {useTheme,themeToCssVars} from './context/ThemeContext';
+import {useCart} from './context/CartContext';
+import {useAuth} from './context/AuthContext';
+import {Product} from './config/products';
+import {useCurrency} from './context/CurrencyContext';
+import {useLanguage} from './context/LanguageContext';
+import {Banner} from './components/Banner';
+import {AboutPage} from './components/AboutPage';
+import {Footer} from './components/Footer';
+import {Slideshow} from './components/Slideshow';
+import {ShopPage} from './components/ShopPage';
+import {ProductDetailPage} from './components/ProductDetailPage';
+import {BagPage} from './components/BagPage';
+import {CheckoutPage} from './components/CheckoutPage';
+import {AccountPage} from './components/AccountPage';
+import {MyOrderPage} from './components/MyOrderPage';
+import {LoginPage} from './components/LoginPage';
+import {RegisterPage} from './components/RegisterPage';
+import {WhatsAppButton} from './components/WhatsAppButton';
+export function App(){
+ const{currencies,defaultCurrency}=useCurrency(); const{language}=useLanguage(); const zh=language==='zh';
+ const{currentTheme}=useTheme();
+ const[branding,setBranding]=useState({logo_path:null as string|null,labels:{en:{home:'Home',shop:'Shop',about:'About',account:'Account'},zh:{home:'首页',shop:'商店',about:'关于我们',account:'账户'}},nav_font_family:'inherit'});
+ const[homeSectionContent,setHomeSectionContent]=useState({en:{heading:'FEATURED HIGHLIGHTS',description:'Discover our finest curated selections',button_text:'Explore Shop'},zh:{heading:'精选推荐',description:'探索我们精心挑选的优质商品',button_text:'浏览商品'}});
+ useEffect(()=>{let alive=true;supabase.from('site_settings').select('setting_value').eq('setting_key','storefront_branding_settings').maybeSingle().then(({data,error})=>{if(!alive||error||!data?.setting_value)return;const raw=data.setting_value as any;const defaults={en:{home:'Home',shop:'Shop',about:'About',account:'Account'},zh:{home:'首页',shop:'商店',about:'关于我们',account:'账户'}};setBranding(current=>({...current,...raw,labels:raw.labels?{en:{...defaults.en,...raw.labels.en},zh:{...defaults.zh,...raw.labels.zh}}:{en:{home:raw.home_label||'Home',shop:raw.shop_label||'Shop',about:raw.about_label||'About',account:raw.account_label||'Account'},zh:defaults.zh}}));});return()=>{alive=false;};},[]);
+ useEffect(()=>{
+  let alive=true;
+  const loadHomepageSectionContent=async()=>{
+   const{data,error}=await supabase.from('site_settings').select('setting_value').eq('setting_key','storefront_homepage_section_content').maybeSingle();
+   if(!alive||error||!data?.setting_value)return;
+   const raw=data.setting_value as any;
+   if(raw?.en||raw?.zh)setHomeSectionContent(current=>({en:{...current.en,...(raw.en||{})},zh:{...current.zh,...(raw.zh||{})}}));
+   else if(raw)setHomeSectionContent(current=>({...current,en:{...current.en,heading:raw.heading||current.en.heading,description:raw.description||current.en.description,button_text:raw.button_text||current.en.button_text}}));
   };
-
-  return (
-    <div className="min-h-screen bg-[#FAFAFA] text-[#1A1A1A] flex flex-col font-sans">
-      {/* 顶部全局导航栏 */}
-      <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center space-x-8">
-            <button 
-              onClick={() => setCurrentTab('home')}
-              className="text-lg font-light tracking-widest uppercase cursor-pointer"
-            >
-              CCC Luxury
-            </button>
-            <nav className="hidden md:flex space-x-6 text-xs uppercase tracking-wider font-medium">
-              <button onClick={() => setCurrentTab('home')} className={`hover:text-black transition-colors ${currentTab === 'home' ? 'text-black font-bold' : 'text-gray-500'}`}>Home</button>
-              <button onClick={() => setCurrentTab('shop')} className={`hover:text-black transition-colors ${currentTab === 'shop' ? 'text-black font-bold' : 'text-gray-500'}`}>Shop</button>
-            </nav>
-          </div>
-
-          <div className="flex items-center space-x-5">
-            {/* 货币切换选择框 */}
-            <select
-              value={selectedCurrency}
-              onChange={(e) => setSelectedCurrency(e.target.value)}
-              className="bg-transparent text-xs font-semibold uppercase border border-gray-300 rounded px-2 py-1 focus:outline-none cursor-pointer"
-            >
-              {Object.values(currencies).map((c) => (
-                <option key={c.code} value={c.code}>
-                  {c.code} ({c.symbol})
-                </option>
-              ))}
-            </select>
-
-            {/* Bag 按钮 */}
-            <button
-              onClick={() => setCurrentTab('bag')}
-              className="relative text-xs uppercase tracking-wider font-semibold hover:opacity-70 transition-opacity cursor-pointer"
-            >
-              Bag
-              {totalCartCount > 0 && (
-                <span className="absolute -top-2 -right-3 bg-black text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
-                  {totalCartCount}
-                </span>
-              )}
-            </button>
-
-            {/* Account / Login / Order 按钮 */}
-            <button
-              onClick={() => {
-                if (user) {
-                  setAccountSubTab('profile');
-                  setCurrentTab('account');
-                } else {
-                  setCurrentTab('account'); // 支持访客查看 Account/Order 状态
-                }
-              }}
-              className="text-xs uppercase tracking-wider font-semibold hover:opacity-70 transition-opacity cursor-pointer"
-            >
-              {user ? 'Account' : 'Account'}
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* 主体内容区域切换 */}
-      <main className="flex-grow">
-        {currentTab === 'home' && (
-          <div className="space-y-12 pb-16">
-            <Banner />
-            <div className="max-w-7xl mx-auto px-6">
-              <div className="text-center space-y-2 mb-8">
-                <h2 className="text-2xl font-light tracking-wider">FEATURED HIGHLIGHTS</h2>
-                <p className="text-xs text-gray-500 uppercase tracking-widest">Discover our finest curated selections</p>
-              </div>
-            </div>
-            <Slideshow />
-            <div className="text-center pt-4">
-              <button
-                onClick={() => setCurrentTab('shop')}
-                className="px-8 py-3 bg-black text-white text-xs font-semibold uppercase tracking-widest rounded-full hover:bg-gray-800 transition-all shadow-md cursor-pointer"
-              >
-                Explore Full Shop
-              </button>
-            </div>
-          </div>
-        )}
-
-        {currentTab === 'shop' && (
-          <ShopPage selectedCurrency={selectedCurrency} onSelectProduct={handleSelectProduct} />
-        )}
-
-        {currentTab === 'productDetail' && selectedProduct && (
-          <ProductDetailPage
-            product={selectedProduct}
-            selectedCurrency={selectedCurrency}
-            onBack={() => setCurrentTab('shop')}
-            onGoBag={() => setCurrentTab('bag')}
-          />
-        )}
-
-        {currentTab === 'bag' && (
-          <BagPage
-            selectedCurrency={selectedCurrency}
-            onGoShop={() => setCurrentTab('shop')}
-            onCheckout={() => setCurrentTab('checkout')}
-          />
-        )}
-
-        {/* 关键结算路由 */}
-        {currentTab === 'checkout' && (
-          <CheckoutPage
-            selectedCurrency={selectedCurrency}
-            onOrderComplete={() => {
-              // 修改点 2：下单完成后直接跳转到正确的 MyOrderPage 视图
-              setCurrentTab('myOrder');
-            }}
-          />
-        )}
-
-        {currentTab === 'account' && (
-          <AccountPage
-            initialSubTab={accountSubTab}
-            selectedCurrency={selectedCurrency}
-          />
-        )}
-
-        {/* 修改点 3：绑定正确的 MyOrderPage 组件 */}
-        {(currentTab === 'order' || currentTab === 'myOrder') && (
-          <MyOrderPage selectedCurrency={selectedCurrency} />
-        )}
-
-        {currentTab === 'login' && (
-          <LoginPage
-            onSuccess={() => setCurrentTab('account')}
-            onGoSignUp={() => setCurrentTab('signup')}
-          />
-        )}
-
-        {currentTab === 'signup' && (
-          <RegisterPage
-            onRegisterSuccess={() => setCurrentTab('account')}
-            onNavigateLogin={() => setCurrentTab('login')}
-          />
-        )}
-      </main>
-
-      {/* 底部版权栏 */}
-      <footer className="bg-white border-t border-gray-200 py-8 text-center text-xs text-gray-500 uppercase tracking-widest">
-        &copy; {new Date().getFullYear()} CCC Luxury Platform. All Rights Reserved.
-      </footer>
-    </div>
-  );
+  void loadHomepageSectionContent();
+  const channel=supabase.channel('storefront-homepage-section-content')
+   .on('postgres_changes',{event:'*',schema:'public',table:'site_settings',filter:'setting_key=eq.storefront_homepage_section_content'},()=>{void loadHomepageSectionContent();})
+   .subscribe();
+  const refreshOnReturn=()=>{if(document.visibilityState==='visible')void loadHomepageSectionContent();};
+  window.addEventListener('focus',refreshOnReturn);
+  document.addEventListener('visibilitychange',refreshOnReturn);
+  const refreshInterval=window.setInterval(()=>{if(document.visibilityState==='visible')void loadHomepageSectionContent();},30000);
+  return()=>{alive=false;window.clearInterval(refreshInterval);window.removeEventListener('focus',refreshOnReturn);document.removeEventListener('visibilitychange',refreshOnReturn);void supabase.removeChannel(channel);};
+ },[]);
+ const logoUrl=branding.logo_path?supabase.storage.from('homepage-media').getPublicUrl(branding.logo_path).data.publicUrl:'';
+ const[currentTab,setCurrentTab]=useState('home');const[loginReturnTab,setLoginReturnTab]=useState('home');const openLogin=(returnTo:string=currentTab)=>{setLoginReturnTab(returnTo);setCurrentTab('login');};const[selectedCurrency,setSelectedCurrency]=useState(defaultCurrency);
+ useEffect(()=>{setSelectedCurrency(defaultCurrency);},[defaultCurrency]);const[selectedProduct,setSelectedProduct]=useState<Product|null>(null);const[accountSubTab,setAccountSubTab]=useState('profile');const[selectedCartItemIds,setSelectedCartItemIds]=useState<string[]>([]);
+ const{items}=useCart();const{user,loading}=useAuth();const totalCartCount=items.reduce((sum,i)=>sum+i.quantity,0);
+ const handleSelectProduct=(product:Product)=>{setSelectedProduct(product);setCurrentTab('productDetail');window.scrollTo({top:0,behavior:'smooth'});};
+ if(loading)return <div className="min-h-screen grid place-items-center">Loading…</div>;
+ return <div className="min-h-screen flex flex-col font-sans" style={{...themeToCssVars(currentTheme),backgroundColor:"var(--theme-background)",color:"var(--theme-text-primary)"}}>
+ <header className="sticky top-0 z-50 backdrop-blur-md border-b" style={{backgroundColor:"var(--theme-surface)",borderColor:"var(--theme-border)"}}><div className="max-w-7xl mx-auto px-4 md:px-6"><div className="min-h-16 flex items-center justify-between gap-3"><div className="flex items-center gap-4 md:gap-8 min-w-0"><button onClick={()=>setCurrentTab('home')} className="shrink-0 text-lg font-light tracking-widest uppercase">{logoUrl?<img src={logoUrl} alt="Store logo" className="max-h-10 max-w-36 object-contain"/>:'Online Store'}</button><nav className="hidden md:flex space-x-6 text-xs uppercase tracking-wider" style={{fontFamily:branding.nav_font_family||"inherit"}}><button onClick={()=>setCurrentTab('home')}>{branding.labels[zh?'zh':'en'].home}</button><button onClick={()=>setCurrentTab('shop')}>{branding.labels[zh?'zh':'en'].shop}</button><button onClick={()=>setCurrentTab('about')}>{branding.labels[zh?'zh':'en'].about}</button></nav></div><div className="flex items-center gap-3 md:gap-5 shrink-0"><select value={selectedCurrency} onChange={e=>setSelectedCurrency(e.target.value)} className="bg-transparent text-xs border rounded px-2 py-1">{currencies.filter(c=>c.isActive).map(c=><option key={c.code} value={c.code}>{c.code} ({c.symbol})</option>)}</select><button onClick={()=>user?setCurrentTab('bag'):openLogin('bag')} className="text-xs uppercase">{zh?'购物袋':'Bag'} {user&&totalCartCount>0?'('+totalCartCount+')':''}</button><button onClick={()=>user?setCurrentTab('account'):openLogin('account')} className="text-xs uppercase">{branding.labels[zh?'zh':'en'].account}</button></div></div><nav className="md:hidden flex justify-center gap-8 pb-3 text-xs uppercase tracking-wider" style={{fontFamily:branding.nav_font_family||"inherit"}}><button onClick={()=>setCurrentTab('home')}>{branding.labels[zh?'zh':'en'].home}</button><button onClick={()=>setCurrentTab('shop')}>{branding.labels[zh?'zh':'en'].shop}</button><button onClick={()=>setCurrentTab('about')}>{branding.labels[zh?'zh':'en'].about}</button></nav></div></header>
+ <main className="flex-grow">
+ {currentTab==='home'&&<div className="space-y-12 pb-16"><Banner/><div className="text-center space-y-2"><h2 className="text-2xl font-light">{homeSectionContent[zh?'zh':'en'].heading}</h2>{homeSectionContent[zh?'zh':'en'].description&&<p className="text-xs text-gray-500 uppercase tracking-widest">{homeSectionContent[zh?'zh':'en'].description}</p>}</div><Slideshow/><div className="text-center"><button onClick={()=>setCurrentTab('shop')} className="px-8 py-3 bg-black text-white rounded-full">{homeSectionContent[zh?'zh':'en'].button_text}</button></div></div>}
+ {currentTab==='about'&&<AboutPage/>}
+ {currentTab==='shop'&&<ShopPage selectedCurrency={selectedCurrency} onSelectProduct={handleSelectProduct}/>}
+ {currentTab==='productDetail'&&selectedProduct&&<ProductDetailPage product={selectedProduct} selectedCurrency={selectedCurrency} onBack={()=>setCurrentTab('shop')} onGoBag={()=>user?setCurrentTab('bag'):openLogin('bag')} onLogin={()=>openLogin('productDetail')}/>}
+ {currentTab==='bag'&&<BagPage selectedCurrency={selectedCurrency} onGoShop={()=>setCurrentTab('shop')} onGoCheckout={(ids)=>{setSelectedCartItemIds(ids);user?setCurrentTab('checkout'):openLogin('checkout');}}/>}
+ {currentTab==='checkout'&&<CheckoutPage selectedCurrency={selectedCurrency} selectedItemIds={selectedCartItemIds} onOrderComplete={()=>setCurrentTab('myOrder')}/>}
+ {currentTab==='account'&&<AccountPage initialSubTab={accountSubTab} selectedCurrency={selectedCurrency} onGoOrders={()=>setCurrentTab('myOrder')}/>}
+ {currentTab==='myOrder'&&<MyOrderPage selectedCurrency={selectedCurrency}/>}
+ {currentTab==='login'&&<LoginPage onLoginSuccess={()=>setCurrentTab(loginReturnTab)} onNavigateRegister={()=>setCurrentTab('signup')}/>}
+ {currentTab==='signup'&&<RegisterPage onRegisterSuccess={()=>setCurrentTab(loginReturnTab)} onNavigateLogin={()=>setCurrentTab('login')}/>}
+ </main><Footer selectedCurrency={selectedCurrency} onCurrencyChange={setSelectedCurrency}/><WhatsAppButton/></div>;
 }
-
 export default App;

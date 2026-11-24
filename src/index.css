@@ -30,3 +30,36 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
 }
+
+
+/* Storefront theme tokens are scoped to the customer app; Admin keeps its own neutral interface. */
+#root .bg-white {
+  background-color: var(--theme-surface) !important;
+}
+#root .bg-gray-50 {
+  background-color: var(--theme-background) !important;
+}
+#root .bg-gray-100 {
+  background-color: var(--theme-primary) !important;
+}
+#root .text-black,
+#root .text-gray-800,
+#root .text-gray-700 {
+  color: var(--theme-text-primary) !important;
+}
+#root .text-gray-600,
+#root .text-gray-500 {
+  color: var(--theme-text-secondary) !important;
+}
+#root .border,
+#root .border-gray-100,
+#root .border-gray-200,
+#root .border-gray-300 {
+  border-color: var(--theme-border) !important;
+}
+#root .bg-black {
+  background-color: var(--theme-button-primary) !important;
+}
+#root .text-white {
+  color: var(--theme-button-text) !important;
+}
