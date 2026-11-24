@@ -35,7 +35,7 @@ function mapUser(user: User | null): UserAccount | null {
   };
 }
 
-async function rejectAdminAccount(session: Session): Promise<boolean> {
+async function rejectAdminAccount(): Promise<boolean> {
   const { data, error } = await supabase.rpc('get_my_admin_access');
   if (error) {
     // A temporary admin-lookup/RPC failure must not destroy a valid customer session.
@@ -67,7 +67,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const candidate = data.session;
       if (candidate) {
         setSession(candidate);
-        const isAdmin = await rejectAdminAccount(candidate);
+        const isAdmin = await rejectAdminAccount();
         if (!alive) return;
         if (isAdmin) setSession(null);
       } else {
@@ -85,7 +85,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, pass: string) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
     if (error) throw error;
-    if (data.session && await rejectAdminAccount(data.session)) {
+    if (await rejectAdminAccount()) {
       setSession(null);
       throw new Error('This is a backend administrator account. Please use the Admin Portal to sign in.');
     }
