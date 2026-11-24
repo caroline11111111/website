@@ -1,10 +1,11 @@
 import { supabase } from './supabase';
 
-export async function applySiteFavicon() {
+export async function applySiteFavicon(scope: 'storefront' | 'admin' = 'storefront') {
+  const settingKey = scope === 'storefront' ? 'storefront_favicon' : 'admin_favicon';
   const { data, error } = await supabase
     .from('site_settings')
     .select('setting_value')
-    .eq('setting_key', 'storefront_favicon')
+    .eq('setting_key', settingKey)
     .maybeSingle();
   if (error) return;
   const value = (data?.setting_value || {}) as { storage_path?: string | null; mime_type?: string | null };
