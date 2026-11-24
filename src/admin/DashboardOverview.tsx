@@ -1,5 +1,6 @@
 import React,{useEffect,useMemo,useState} from 'react';
 import type {SupabaseClient} from '@supabase/supabase-js';
+import {formatDateInputValue} from '../utils/dateFormat';
 
 type Access={is_admin:boolean;is_owner:boolean;permissions:string[]};
 type Props={supabase:SupabaseClient;access:Access;timezone:string;now:Date;onNavigate:(view:string)=>void};
@@ -59,12 +60,12 @@ export function DashboardOverview({supabase,access,timezone,now,onNavigate}:Prop
  const sales=valid.reduce((sum,o)=>sum+Number(o.total_myr||0),0);
  const units=valid.reduce((sum,o)=>sum+(o.order_items||[]).reduce((n,i)=>n+Number(i.quantity||0),0),0);
  const chart=useMemo(()=>{
-  const labels:string[]=[];const values:number[]=[];
+  const buckets:{key:string;label:string}[]=[];const values:number[]=[];
   let cursor=new Date(range.start);let guard=0;
-  while(cursor<range.end&&guard<400){labels.push(keyFor(cursor,period,timezone));values.push(0);cursor=addPeriod(cursor,period);guard++;}
-  const index=new Map(labels.map((label,i)=>[label,i]));
+  while(cursor<range.end&&guard<400){buckets.push({key:keyFor(cursor,period,timezone),label:formatDateInputValue(cursor.toISOString().slice(0,10))});values.push(0);cursor=addPeriod(cursor,period);guard++;}
+  const index=new Map(buckets.map((bucket,i)=>[bucket.key,i]));
   for(const order of valid){const i=index.get(keyFor(new Date(order.created_at),period,timezone));if(i!==undefined)values[i]+=Number(order.total_myr||0);}
-  return labels.map((label,i)=>({label,value:values[i]}));
+  return buckets.map((bucket,i)=>({label:bucket.label,value:values[i]}));
  },[range,period,timezone,valid]);
  const top=useMemo(()=>{const map=new Map<string,number>();for(const order of valid)for(const item of order.order_items||[])map.set(item.product_name,(map.get(item.product_name)||0)+Number(item.quantity||0));return [...map.entries()].sort((a,b)=>b[1]-a[1]).slice(0,5);},[valid]);
  const max=Math.max(1,...chart.map(x=>x.value));
@@ -81,7 +82,7 @@ export function DashboardOverview({supabase,access,timezone,now,onNavigate}:Prop
    <div className="flex flex-wrap justify-between items-center gap-3"><div><h3 className="font-semibold">Sales Analytics</h3><p className="text-xs text-slate-500">Verified payments only · Cancelled orders excluded · MYR base amount</p></div>
     <div className="flex flex-wrap gap-2">{['daily','weekly','monthly','yearly'].map(x=><button key={x} onClick={()=>{setPeriod(x);setCustom(false);}} className={'px-3 py-2 rounded-lg text-xs border '+(!custom&&period===x?'bg-slate-900 text-white':'')}>{x[0].toUpperCase()+x.slice(1)}</button>)}<button onClick={()=>setCustom(v=>!v)} className={'px-3 py-2 rounded-lg text-xs border '+(custom?'bg-slate-900 text-white':'')}>Custom</button></div>
    </div>
-   {custom&&<div className="flex flex-wrap gap-3 items-end text-sm"><label className="grid gap-1">From<input type="date" value={from} onChange={e=>setFrom(e.target.value)} className="border rounded-lg p-2"/></label><label className="grid gap-1">To<input type="date" value={to} min={from||undefined} onChange={e=>setTo(e.target.value)} className="border rounded-lg p-2"/></label></div>}
+   {custom&&<div className="flex flex-wrap gap-3 items-end text-sm"><label className="grid gap-1">From<input type="date" value={from} onChange={e=>setFrom(e.target.value)} className="border rounded-lg p-2"/>{from&&<span className="text-xs text-slate-500">Selected: {formatDateInputValue(from)}</span>}</label><label className="grid gap-1">To<input type="date" value={to} min={from||undefined} onChange={e=>setTo(e.target.value)} className="border rounded-lg p-2"/>{to&&<span className="text-xs text-slate-500">Selected: {formatDateInputValue(to)}</span>}</label></div>}
    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3"><div className="rounded-lg bg-slate-50 p-3"><p className="text-xs text-slate-500">Sales</p><p className="font-semibold mt-1">{money(sales)}</p></div><div className="rounded-lg bg-slate-50 p-3"><p className="text-xs text-slate-500">Paid Orders</p><p className="font-semibold mt-1">{valid.length}</p></div><div className="rounded-lg bg-slate-50 p-3"><p className="text-xs text-slate-500">Units Sold</p><p className="font-semibold mt-1">{units}</p></div><div className="rounded-lg bg-slate-50 p-3"><p className="text-xs text-slate-500">Cancelled</p><p className="font-semibold mt-1">{filtered.filter(o=>o.order_status==='cancelled').length}</p></div></div>
    {!loading&&(!from||!to)&&custom&&<p className="text-xs text-slate-500">Choose both dates to view the custom range.</p>}
    <div className="space-y-2">{chart.length===0?<p className="text-sm text-slate-500">No sales data for this period.</p>:chart.map((x,i)=><div key={i} className="grid grid-cols-[5rem_1fr_auto] gap-3 items-center text-xs"><span className="text-slate-500">{x.label}</span><div className="h-3 rounded bg-slate-100 overflow-hidden"><div className="h-full bg-slate-800 rounded" style={{width:(x.value/max*100)+'%'}}/></div><span className="tabular-nums text-slate-700">{money(x.value)}</span></div>)}</div>
