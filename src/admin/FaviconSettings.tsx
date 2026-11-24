@@ -39,6 +39,27 @@ export function FaviconSettings({ userId, scope }: { userId: string; scope: Favi
 
   useEffect(() => { void load(); }, []);
 
+  const handlePaste = (event: React.ClipboardEvent<HTMLDivElement>) => {
+    const items = Array.from(event.clipboardData.items);
+    const imageItem = items.find((item) => item.type === 'image/png');
+    if (!imageItem) {
+      setError('Clipboard does not contain a PNG image. Please copy a PNG image and try again.');
+      return;
+    }
+    const blob = imageItem.getAsFile();
+    if (!blob) {
+      setError('Could not read the image from the clipboard. Please try copying it again.');
+      return;
+    }
+    if (blob.size > 5 * 1024 * 1024) {
+      setError('The pasted favicon must be no larger than 5 MB.');
+      return;
+    }
+    setError('');
+    setNotice('');
+    setFile(new File([blob], 'pasted-favicon.png', { type: 'image/png' }));
+  };
+
   const save = async () => {
     if (!file || busy) return;
     setError('');
@@ -127,6 +148,16 @@ export function FaviconSettings({ userId, scope }: { userId: string; scope: Favi
         </div>
       </div>
       <div className="rounded-xl border bg-white p-5 space-y-4">
+        <div
+          role="group"
+          aria-label="Paste favicon image"
+          tabIndex={0}
+          onPaste={handlePaste}
+          className="rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 p-4 text-center outline-none focus:border-slate-500"
+        >
+          <p className="text-sm font-medium text-slate-700">Copy an image, click here, then press Ctrl+V (or ⌘+V)</p>
+          <p className="mt-1 text-xs text-slate-500">PNG only · Maximum 5 MB</p>
+        </div>
         <label className="block text-sm font-medium text-slate-700">
           Upload a new favicon (PNG)
           <input className="mt-2 block w-full text-sm" type="file" accept="image/png,.png" onChange={(event) => setFile(event.target.files?.[0] || null)} />
