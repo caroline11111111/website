@@ -115,3 +115,32 @@ body {
   outline: 2px solid var(--theme-accent);
   outline-offset: 2px;
 }
+
+
+/* Higher-specificity Admin theme overrides (the shared storefront utility rules target #root). */
+#root .admin-theme .bg-white,
+#root .admin-theme .bg-slate-50,
+#root .admin-theme .bg-slate-100 {
+  background-color: var(--theme-surface) !important;
+}
+#root .admin-theme .bg-slate-900,
+#root .admin-theme .bg-black {
+  background-color: var(--theme-button-primary) !important;
+}
+#root .admin-theme button.bg-slate-900,
+#root .admin-theme button.bg-black,
+#root .admin-theme button.text-white,
+#root .admin-theme .text-white {
+  color: var(--theme-button-text) !important;
+}
+#root .admin-theme .text-slate-900,
+#root .admin-theme .text-slate-800,
+#root .admin-theme .text-slate-700,
+#root .admin-theme .text-black {
+  color: var(--theme-text-primary) !important;
+}
+#root .admin-theme .text-slate-600,
+#root .admin-theme .text-slate-500,
+#root .admin-theme .text-slate-400 {
+  color: var(--theme-text-secondary) !important;
+}
