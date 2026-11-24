@@ -9,7 +9,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "build:admin": "vite build --config vite.admin.config.ts"
   },
   "dependencies": {
     "react": "^18.3.1",
