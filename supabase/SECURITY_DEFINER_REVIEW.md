@@ -188,3 +188,21 @@ Additional role-model verification for the refund-evidence finding:
 - The live admin_user_permission_overrides table currently has no explicit deny override for either permission (and was observed empty in the table inventory). Thus no current view-only admin account was identified from the present role/override snapshot.
 - The permission model does support per-user permission overrides, including revoking refunds.manage while retaining refunds.view. The Storage policy therefore becomes exploitable if such a view-only account is configured in future; the policy is not least-privilege safe even though the current default roles bundle both permissions.
 - refund-evidence is a private bucket with a 5 MiB limit and JPEG/PNG/WebP allowlist; public=false.
+## Remediation drafted on development branch — not applied to Production
+
+Date: 2026-11-26
+
+Migration added: `supabase/migrations/20261126090000_security_hardening_followup.sql`.
+
+The migration is committed on `fix/storefront-render-admin-features-favicon` only. It contains:
+- Enable RLS (without FORCE and without client policies) on `app_private.owner_principal`, `owner_recovery_credentials`, `owner_recovery_audit_logs`, and `sku_registry`. Live catalog review confirmed these tables are owned by postgres and the internal functions/triggers that access them are SECURITY DEFINER functions owned by postgres. Existing anon/authenticated table grants remain unchanged and absent.
+- Replace the refund-evidence FOR ALL policy with separate SELECT, INSERT, UPDATE, and DELETE policies. SELECT permits refunds.view or refunds.manage; all writes, including DELETE, require refunds.manage.
+- Strengthen `request_shipping_address_change` to reject NULL/non-object payloads and require nonblank `address_line_1`, `city`, and `country_code`.
+- Add matching CHECK constraints to orders.shipping_address and both original/requested shipping-address JSON columns in order_shipping_change_requests.
+- Update `sync_shipping_rate_currency_prices()` so active non-MYR currencies without a configured positive exchange rate do not get a synthetic 1:1 price; any stale row for that currency/rate is deleted.
+
+Pre-migration read-only data checks found zero invalid existing order shipping addresses and zero invalid original/requested addresses in shipping-change requests. The canonical required fields were aligned with the existing customer_addresses schema and observed order JSON keys.
+
+Verification completed so far: the migration file was committed and fetched back from GitHub; its content includes the four separate Storage policy commands, RLS enablement, required address validation, and no `coalesce(er.rate,1)` fallback. Production was not modified. This is not yet an execution test: no isolated online database was available in the current workflow, and no migration was applied to Production. The migration still requires an isolated test run and application integration checks before release.
+
+Release safety: do not merge/deploy or apply this migration to Production until the isolated migration test and permission-specific tests pass and the user explicitly approves Production release.
