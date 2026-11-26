@@ -93,3 +93,38 @@ Recommended remediation (not applied): define the canonical address JSON contrac
 No direct privilege escalation was confirmed in the functions inspected in this follow-up. One concrete medium-severity validation weakness was found in customer shipping-address change requests: empty/incomplete address objects can be approved and overwrite a valid order address. The `app_private` exposure and Owner self-deactivation questions from the first pass remain open.
 
 All findings are observations from read-only Production inspection. No Production data, schema, grants, or deployment state was changed.
+
+
+## Follow-up review — app_private exposure, Owner active flag, currency synchronization
+
+Date: 2026-11-26 (read-only Production catalog review)
+
+### app_private Data API exposure
+
+- Production database grants show USAGE on `app_private` for both `anon` and `authenticated`; its helper functions `is_owner()`, `is_admin_user()`, and `has_permission(text)` also have EXECUTE for both roles.
+- The checked-in `supabase/config.toml` currently lists only `public` and `graphql_public` under `[api].schemas`; it does not list `app_private`.
+- However, the live database session returns NULL for `current_setting('pgrst.db_schemas', true)`, and the available project metadata API does not expose the live PostgREST schema setting. Therefore the production Data API exposure state remains **unconfirmed**. A repository config file is not proof of the currently applied hosted setting.
+- The helper functions reviewed only evaluate the current caller's own identity/permission state using `auth.uid()`; no cross-user data retrieval or privilege escalation was found in their bodies. If `app_private` is exposed, authenticated callers could directly probe their own role/permission booleans. This is unnecessary API surface and should be kept unexposed unless there is a deliberate documented need.
+- Recommended follow-up: verify the hosted Data API exposed-schema setting in the Supabase Dashboard (Integrations → Data API) or an authoritative Management API setting before changing grants. Do not revoke grants blindly because policies and internal database code depend on these functions.
+
+### Owner self-deactivation — refined conclusion
+
+- `app_private.is_owner()` checks the singleton `app_private.owner_principal` record and does not depend on `public.admin_users.is_active`.
+- `app_private.has_permission(text)` returns true immediately for the Owner identity, before checking the normal active-admin permission mapping.
+- Therefore setting the Owner's `admin_users.is_active=false` through `set_admin_access` does **not** remove the Owner's database-level `is_owner()` identity or permission bypass. This is not a confirmed database privilege lockout.
+- `list_admin_users()` filters the Owner result to `au.is_active=true`, so a self-deactivated Owner may disappear from that particular list. Frontend admin-route behavior was not verified in this SQL-only pass. Treat this as an operational/UI consistency question, not a confirmed security vulnerability.
+
+### Currency and shipping-price trigger review
+
+- Production currently has active MYR, CNY, SGD, and USD currencies; all four corresponding exchange-rate rows are configured and have positive rates. The database CHECK constraint enforces MYR=1 and requires non-MYR rates to be positive when configured, or NULL when not configured.
+- The order exchange-rate snapshot trigger rejects checkout if a non-MYR currency has no configured active exchange rate.
+- The currency-price synchronization trigger deletes non-MYR product, variant, and shipping price rows when an exchange rate is removed/unconfigured; it rebuilds rows only for configured exchange rates and active currencies.
+- **Low-severity consistency issue in `public.sync_shipping_rate_currency_prices()`:** when a shipping-rate row is inserted or its MYR fee fields are updated, the trigger loops over every active currency and uses `coalesce(er.rate,1)`. If a non-MYR currency is active but its exchange rate is not configured (or the exchange-rate row is absent), it will still create/update that shipping currency price using a multiplier of 1. This conflicts with the configured-rate-only behavior of the other synchronization trigger and can leave misleading shipping-price rows. In the current Production snapshot all four active currencies have configured rates, so this condition is **not currently observed in live rows**.
+- Recommended remediation (not applied): make the shipping-rate trigger generate non-MYR rows only when an active currency has a configured positive exchange rate; otherwise delete/skip that currency's row. Add regression tests for active-but-unconfigured currencies, toggling a rate off/on, and inserting/updating shipping rates. Verify all dependent checkout quote paths before release.
+
+### Current scope conclusion
+
+- No confirmed privilege escalation was found in the app_private helper bodies or Owner active-flag behavior reviewed here.
+- Two code-level improvements are recommended: explicitly keep `app_private` out of the hosted Data API schema list (after confirming the live setting), and correct the shipping-rate currency trigger's fallback-to-1 behavior.
+- The shipping-address JSON validation weakness recorded above remains the concrete medium-severity finding.
+- No Production grants, schema, data, or deployment state were changed.
