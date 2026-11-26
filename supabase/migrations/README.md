@@ -4,21 +4,23 @@ Source of truth: Supabase project `jhjebhpzzjbtsmflwnzf`, table `supabase_migrat
 
 ## Reconciliation status
 
-- Supabase migration ledger: **52 applied migrations**.
-- Repository SQL files: **52**.
-- Every applied migration now has a matching `<version>_<name>.sql` file in this directory.
+- Production's recovered historical migration ledger: **52 applied migrations**.
+- Recovered historical SQL files: **52**.
+- Current repository SQL files: **59** (52 recovered historical files plus 7 forward-only additions).
+- Every one of the 52 historical Production migrations has a matching `<version>_<name>.sql` file in this directory; the 7 later additions are not part of the historical Production ledger.
 - The SQL contents were recovered from the SQL statements retained by Supabase for each applied migration. This is not a reconstruction from current schema guesses.
 - Six files that existed in the repository but differed from the database-recorded SQL were replaced with the exact recorded statement.
 - The three incorrectly timestamped migration files were aligned to their actual Supabase versions.
 - The superseded, unapplied Favicon draft migration was removed.
-- **No migration was applied, re-applied, rolled back, or otherwise executed against the live database during this recovery.** This operation restored source files in GitHub only.
+- **No migration was applied, re-applied, rolled back, or otherwise executed against Production.** The 7 forward-only additions were applied only to the separate free website-security-test project for online validation.
 
 ## Verification requirements before using migrations on another database
 
-1. Keep the migration version and name exactly aligned with the Supabase ledger.
-2. Review this migration history before using it to bootstrap a fresh environment.
-3. Confirm required Supabase-managed services, extensions, Auth, Storage buckets, and Edge Functions are also provisioned; SQL migration history alone may not recreate external resources or data.
-4. Never re-run this full history against the already-migrated production database.
+1. Keep the 52 recovered historical migration versions and names exactly aligned with the Production ledger.
+2. Apply the environment bootstrap prerequisites from ../bootstrap/001_create_private_schema.sql to a clean isolated Supabase project before replaying the history.
+3. Confirm Supabase-managed Auth, Storage, roles, extensions, and pg_cron are available; SQL migration history alone does not recreate Auth users, Storage objects, secrets, or Edge Function deployments.
+4. The 7 forward-only additions were successfully replayed in the isolated Free project on 2026-11-26; see ../RECOVERY.md for validation results.
+5. Never re-run the historical migration set against the already-migrated Production database.
 
 ## Applied migration manifest
 
@@ -84,5 +86,25 @@ Source of truth: Supabase project `jhjebhpzzjbtsmflwnzf`, table `supabase_migrat
 - Backed up the active `owner-manage-account-password` Edge Function source (Production version 3) to `../functions/owner-manage-account-password/index.ts`. No secrets were copied.
 - Production contains a `private` schema owned by `postgres`; three currency trigger functions use it. No `CREATE SCHEMA private` statement was found in the 52 recovered migration files. A local-only prerequisite is documented in `../bootstrap/001_create_private_schema.sql`.
 - The local recovery sequence and limitations are documented in `../RECOVERY.md`.
-- A fresh database replay has **not** yet been run. The bootstrap prerequisite must be handled before the migrations; do not use `supabase db reset` until it has been incorporated into a properly generated and reviewed migration.
+- A clean online replay was completed in the free website-security-test project on 2026-11-26. The two environment prerequisites were installed separately, then all 52 recovered historical migrations and 7 forward-only additions applied successfully.
 - Storage bucket declarations do not back up uploaded objects. Auth users, Storage objects, and Production secrets remain outside this repository backup.
+
+## Forward-only additions and online validation (2026-11-26)
+
+The following seven migrations were added after the historical 52-file recovery. They capture the security remediation and Production catalog objects that were not represented in the original ledger:
+
+| Version | Name | Purpose |
+|---|---|---|
+| `20261126090000` | `security_hardening_followup` | Split refund-evidence policies, validate shipping addresses, remove implicit 1:1 FX fallback, enable RLS on internal tables |
+| `20261126100000` | `restore_public_variant_visibility_helpers` | Restore three Production variant-visibility helper functions and product read policies |
+| `20261126100500` | `restore_storefront_page_layout_policies` | Recreate the Production storefront page-layout table and its RLS policies; no Production rows copied |
+| `20261126101000` | `restore_production_rpc_definitions_and_acl_defaults` | Restore Production owner-list and region-normalization RPC definitions; align function/default ACLs |
+| `20261126101500` | `align_storefront_page_layout_privileges` | Match the storefront layout table grants |
+| `20261126102000` | `align_public_table_privileges` | Match public application-table grants to the read-only Production catalog |
+| `20261126102500` | `remove_default_public_table_delete_grants` | Match restricted default DELETE privileges for future public tables |
+
+Online replay outcome:
+- 52 historical + 7 forward-only migrations succeeded in website-security-test.
+- Two test-only environment prerequisites were recorded separately (private schema and RLS auto-enable event trigger).
+- The test ledger contains 61 entries in total.
+- Production remains read-only; none of the seven additions has been applied there.
