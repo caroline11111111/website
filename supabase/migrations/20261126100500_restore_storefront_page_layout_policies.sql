@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS public.storefront_page_layouts (
 
 ALTER TABLE public.storefront_page_layouts ENABLE ROW LEVEL SECURITY;
 
+REVOKE SELECT, INSERT, UPDATE, DELETE ON public.storefront_page_layouts FROM anon, authenticated, service_role;
 GRANT SELECT ON public.storefront_page_layouts TO anon, authenticated;
 GRANT INSERT, UPDATE ON public.storefront_page_layouts TO authenticated;
 
