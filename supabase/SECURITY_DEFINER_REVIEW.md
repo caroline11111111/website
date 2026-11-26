@@ -203,6 +203,49 @@ The migration is committed on `fix/storefront-render-admin-features-favicon` onl
 
 Pre-migration read-only data checks found zero invalid existing order shipping addresses and zero invalid original/requested addresses in shipping-change requests. The canonical required fields were aligned with the existing customer_addresses schema and observed order JSON keys.
 
-Verification completed so far: the migration file was committed and fetched back from GitHub; its content includes the four separate Storage policy commands, RLS enablement, required address validation, and no `coalesce(er.rate,1)` fallback. Production was not modified. This is not yet an execution test: no isolated online database was available in the current workflow, and no migration was applied to Production. The migration still requires an isolated test run and application integration checks before release.
+Initial static verification: the migration file was committed and fetched back from GitHub; it includes the four separate Storage policy commands, RLS enablement, required address validation, and no `coalesce(er.rate,1)` fallback. The subsequent online isolated replay and transaction-level checks are documented below. Production was not modified.
 
 Release safety: do not merge/deploy or apply this migration to Production until the isolated migration test and permission-specific tests pass and the user explicitly approves Production release.
+
+## Online isolated validation — 2026-11-26
+
+A free Supabase test project, `website-security-test` (`xsvodzqyxyycbvwdwjru`), was created in Singapore at US$0/month. It contains no copied Production Auth users, customer records, or Storage objects. All writes described here occurred only in that test project.
+
+### Migration execution
+
+- The 52 recovered historical migrations and 7 forward-only migrations completed successfully.
+- Two test-only environment prerequisites were installed separately: the owner-only `private` schema and the Production `public.rls_auto_enable()` function / `ensure_rls` event trigger.
+- The first replay attempt stopped at migration 2 because `public.rls_auto_enable()` was missing from the fresh project. After installing the environment prerequisite in the test project, migration 2 and the remaining sequence succeeded.
+- Production was not used as a migration target.
+
+### Catalog parity
+
+- Both projects have 48 public application tables, all with RLS enabled.
+- Public columns (455), indexes (132), triggers (93), and the 229 historical constraints match.
+- The test project has three additional CHECK constraints for shipping-address JSON validation.
+- All 72 function signatures match; all 64 SECURITY DEFINER functions in both projects have a fixed function-level `search_path`.
+- Function ACLs, public table ACLs, and public-schema default ACLs match after reconciliation.
+- All non-refund RLS/Storage policy definitions match. The test project intentionally replaces the single Production refund-evidence FOR ALL policy with four command-specific policies.
+- All four Storage bucket configurations and the order-deadline cron job match Production.
+- RLS is enabled on the four app_private tables in the test project as defense in depth; Production remains unchanged and still has RLS disabled on those four tables. Direct anon/authenticated table SELECT grants are absent in both projects.
+
+### Permission-specific tests
+
+All fixtures were created and rolled back inside transactions in the isolated test project.
+
+1. A test Admin with `refunds.view` and an explicit deny for `refunds.manage` could read refund-evidence objects, but could not delete or upload them.
+2. A test Admin with `refunds.manage` could delete and upload refund-evidence objects.
+3. The Storage delete-protection trigger was temporarily disabled only inside the test transaction to isolate RLS policy behavior. The test did not call the Storage HTTP API, and no Storage object persisted.
+4. `request_shipping_address_change()` rejected incomplete address JSON and accepted a complete address.
+5. The CHECK constraint rejected an invalid order shipping-address update.
+
+### Remaining limitations
+
+- These are isolated database-level tests, not a complete browser/API integration test of the customer and admin applications.
+- The hosted Production Data API exposed-schema setting remains unconfirmed; repository configuration is not proof of the live dashboard setting.
+- The legacy `public.submit_order()` body differs from Production but is restricted to postgres only in both projects; clients cannot execute it. The two active hardening changes to `request_shipping_address_change()` and `sync_shipping_rate_currency_prices()` intentionally differ from Production until a separately approved release.
+- The line-by-line review of all 64 SECURITY DEFINER bodies is still incomplete.
+
+### Release safety
+
+The new migrations and test results are committed on the development branch only. Production remains read-only. Do not merge, deploy, apply migrations, or alter Production until the remaining application/API checks are complete and the user explicitly approves the Production release.
