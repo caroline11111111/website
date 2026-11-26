@@ -128,3 +128,58 @@ Date: 2026-11-26 (read-only Production catalog review)
 - Two code-level improvements are recommended: explicitly keep `app_private` out of the hosted Data API schema list (after confirming the live setting), and correct the shipping-rate currency trigger's fallback-to-1 behavior.
 - The shipping-address JSON validation weakness recorded above remains the concrete medium-severity finding.
 - No Production grants, schema, data, or deployment state were changed.
+
+## Follow-up review — private-table ACLs, customer data policies, and Storage evidence access
+
+Date: 2026-11-26 (read-only Production catalog review)
+
+### app_private RLS Advisor warning — verified ACL context
+
+Supabase's table-list/advisor response flags all four app_private tables as having RLS disabled:
+- owner_principal
+- owner_recovery_credentials
+- owner_recovery_audit_logs
+- sku_registry
+
+A direct read-only catalog check confirmed relrowsecurity=false and relforcerowsecurity=false for all four. The same check confirmed:
+- anon and authenticated both have USAGE on the app_private schema.
+- Neither anon nor authenticated has table-level SELECT, INSERT, UPDATE, or DELETE privileges on any of these four tables.
+- No RLS policies currently exist on these four tables.
+
+Risk interpretation: the Advisor warning is valid as a defense-in-depth/configuration warning, but the direct table ACLs currently block ordinary anon/authenticated table access. Therefore this review did not establish that these rows are presently readable or writable through PostgREST. Actual hosted Data API exposure of app_private also remains unconfirmed. The tables are accessed internally by SECURITY DEFINER functions and triggers; those call paths need to retain their intended behavior if RLS is later enabled.
+
+Recommended remediation (not applied): first verify the hosted Data API schema list; keep app_private unexposed; then plan RLS enablement with narrowly scoped policies or no client policies if all access is intended to remain through vetted privileged functions. Test owner bootstrap/recovery, permission helpers, and SKU registry triggers in an isolated environment before any production change. Do not apply the Advisor SQL blindly.
+
+### Finding — refund-evidence Storage policy allows deletion to view-only admins
+
+Severity: Medium (evidence integrity / authorization scope)
+
+The live storage.objects policy named admins_manage_refund_evidence is a permissive FOR ALL policy for authenticated users on bucket refund-evidence. Its USING expression permits either refunds.view or refunds.manage, while its WITH CHECK expression requires refunds.manage.
+
+For PostgreSQL RLS command semantics, the USING expression controls which existing rows can be targeted by DELETE. Since DELETE does not use WITH CHECK, a user who has refunds.view but lacks refunds.manage can satisfy this policy's DELETE condition and may delete refund-evidence objects. The stricter WITH CHECK does not protect DELETE.
+
+Recommended remediation (not applied): replace the broad FOR ALL policy with separate policies:
+- SELECT: refunds.view OR refunds.manage
+- INSERT: refunds.manage
+- UPDATE: refunds.manage in both USING and WITH CHECK
+- DELETE: refunds.manage in USING
+
+Also review Storage object deletion paths and test with a refunds.view-only admin account in an isolated environment. No Storage objects or policies were changed during this review.
+
+### Customer/profile/address and payment-proof policy observations
+
+- profiles: authenticated users can read their own profile; users with customers.view can read customer profiles. Updates are constrained to the caller's own profile by both USING and WITH CHECK.
+- customer_addresses: authenticated users can read their own addresses; customers.view admins can read customer addresses. Insert, update, and delete are constrained to the caller's own user_id; update has both USING and WITH CHECK.
+- payment_proofs: the row-level SELECT policy permits the owning customer or an admin with payments.review. The associated private Storage bucket policy permits customers to read only objects whose first path segment equals their own Auth UID, or admins with payments.review; customer uploads are similarly constrained to their own UID path.
+- order_refund_attachments: row SELECT is limited to refunds.view or refunds.manage; INSERT requires refunds.manage and created_by=auth.uid(). No direct DELETE policy was returned for this table.
+- Product and product-image policies inspected restrict public reads to published/non-archived products and their images; writes require the corresponding product create/edit permission.
+- Public Storage read policies apply only to homepage-media and product-images. The private evidence buckets do not have a public-read policy in the inspected policy set.
+
+These observations are policy-definition reviews, not end-to-end API or file-download tests.
+
+### Updated conclusion
+
+- The four private tables have RLS disabled, but direct anon/authenticated table privileges are absent; direct client table exposure was not established. The Advisor warning should be remediated deliberately as defense in depth, not by blindly enabling RLS.
+- A concrete Medium-severity Storage authorization issue was identified: refunds.view alone appears sufficient to DELETE objects from refund-evidence because a FOR ALL policy combines a broad USING expression with a narrower WITH CHECK.
+- The previously recorded Medium-severity shipping-address payload validation issue and Low-severity shipping-currency fallback issue remain open.
+- Production remained read-only: no schema, grants, policies, rows, Storage objects, or deployment state were changed.
