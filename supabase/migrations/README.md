@@ -76,3 +76,13 @@ Source of truth: Supabase project `jhjebhpzzjbtsmflwnzf`, table `supabase_migrat
 | `20261124064202` | `add_private_refund_evidence_attachments` | `Recovered` |
 | `20261124065611` | `add_individual_admin_permission_overrides_and_remove_unused_role` | `Recovered` |
 | `20261124065724` | `harden_admin_permission_rpc_wrappers` | `Recovered` |
+
+
+## Additional recovery findings (2026-11-26)
+
+- Added `../config.toml` for local Supabase configuration, including PostgreSQL 17, the four observed Storage bucket settings, and the active account-management Edge Function's `verify_jwt = true` setting.
+- Backed up the active `owner-manage-account-password` Edge Function source (Production version 3) to `../functions/owner-manage-account-password/index.ts`. No secrets were copied.
+- Production contains a `private` schema owned by `postgres`; three currency trigger functions use it. No `CREATE SCHEMA private` statement was found in the 52 recovered migration files. A local-only prerequisite is documented in `../bootstrap/001_create_private_schema.sql`.
+- The local recovery sequence and limitations are documented in `../RECOVERY.md`.
+- A fresh database replay has **not** yet been run. The bootstrap prerequisite must be handled before the migrations; do not use `supabase db reset` until it has been incorporated into a properly generated and reviewed migration.
+- Storage bucket declarations do not back up uploaded objects. Auth users, Storage objects, and Production secrets remain outside this repository backup.
