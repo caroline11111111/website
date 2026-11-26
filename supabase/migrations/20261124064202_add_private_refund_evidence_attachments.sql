@@ -1,3 +1,4 @@
+
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('refund-evidence','refund-evidence',false,5242880,array['image/jpeg','image/png','image/webp'])
 on conflict (id) do update set public=false, file_size_limit=5242880, allowed_mime_types=array['image/jpeg','image/png','image/webp'];
@@ -14,18 +15,18 @@ create table if not exists public.order_refund_attachments (
 alter table public.order_refund_attachments enable row level security;
 revoke all on public.order_refund_attachments from anon, authenticated;
 grant select, insert on public.order_refund_attachments to authenticated;
-
+drop policy if exists order_refund_attachments_read_authorized on public.order_refund_attachments;
 create policy order_refund_attachments_read_authorized
 on public.order_refund_attachments for select to authenticated
 using (app_private.has_permission('refunds.view') or app_private.has_permission('refunds.manage'));
-
+drop policy if exists order_refund_attachments_insert_authorized on public.order_refund_attachments;
 create policy order_refund_attachments_insert_authorized
 on public.order_refund_attachments for insert to authenticated
 with check (
   app_private.has_permission('refunds.manage')
   and created_by = (select auth.uid())
 );
-
+drop policy if exists admins_manage_refund_evidence on storage.objects;
 create policy admins_manage_refund_evidence
 on storage.objects for all to authenticated
 using (bucket_id='refund-evidence' and (app_private.has_permission('refunds.view') or app_private.has_permission('refunds.manage')))
