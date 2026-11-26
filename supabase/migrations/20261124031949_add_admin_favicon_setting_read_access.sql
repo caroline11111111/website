@@ -1,4 +1,3 @@
--- Allow both public browser tabs to read their own independent favicon settings.
 DROP POLICY IF EXISTS site_settings_anon_storefront_read ON public.site_settings;
 CREATE POLICY site_settings_anon_storefront_read
 ON public.site_settings
