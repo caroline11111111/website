@@ -1,3 +1,4 @@
+
 CREATE OR REPLACE FUNCTION app_private.list_admin_user_permissions(p_target_user_id uuid)
 RETURNS TABLE (
   permission_code text,
