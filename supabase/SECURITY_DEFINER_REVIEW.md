@@ -238,6 +238,7 @@ All fixtures were created and rolled back inside transactions in the isolated te
 3. The Storage delete-protection trigger was temporarily disabled only inside the test transaction to isolate RLS policy behavior. The test did not call the Storage HTTP API, and no Storage object persisted.
 4. `request_shipping_address_change()` rejected incomplete address JSON and accepted a complete address.
 5. The CHECK constraint rejected an invalid order shipping-address update.
+6. Shipping currency sync created only the MYR row when CNY/SGD/USD had no configured positive FX rate; a deliberately inserted stale CNY row was deleted on the next sync, while the MYR amount updated correctly. All fixture rows were rolled back.
 
 ### Remaining limitations
 
