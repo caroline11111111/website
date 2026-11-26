@@ -43,3 +43,53 @@ No confirmed privilege-escalation vulnerability was established in the sampled a
 ## Safety boundary
 
 All checks in this review were read-only. Do not apply grants/revokes, change owner status, run migrations, or deploy changes to Production based on this report alone. Any remediation must first be reviewed against RLS policies and application dependencies and must remain outside Production until explicitly approved.
+
+
+## Follow-up review — inventory, shipping, cancellation, refund, notifications, currency
+
+Date: 2026-11-26 (same read-only Production session)
+
+### Functions and controls inspected
+
+Reviewed definitions and/or execute ACLs for:
+- Inventory: `adjust_inventory`, `list_inventory_reservations`, `release_reservation`
+- Cancellation and order state: `request_order_cancellation`, `review_order_cancellation`, `execute_order_cancellation`, `confirm_order_received`, `admin_complete_order`
+- Shipping: `quote_shipping_currency`, `request_shipping_address_change`, `review_shipping_address_change`
+- Refund: `create_order_refund`, `update_order_refund_status`
+- Notifications: `process_order_deadline_notifications`, `mark_admin_notification_read`
+- Related currency and shipping-price trigger functions
+
+### Positive controls observed
+
+- Customer cancellation and shipping-address-change requests constrain the target order by both order ID and `auth.uid()`; customers cannot submit requests against another user's order.
+- Customer receipt confirmation similarly requires the order to belong to the caller and to be in the `shipped` state.
+- Admin cancellation review, cancellation execution, inventory adjustment/release, refund creation/status changes, and shipping-address review check the relevant permission before privileged writes.
+- Cancellation review locks the request and order and accepts only approved/rejected decisions. Execution requires an approved request, locks the request/order, validates the current order state, and records order history and an admin audit entry.
+- Inventory release requires an already-cancelled order and an executed cancellation request. It locks the reservation/order, verifies the reserved quantity can be decremented, marks the reservation released, and records an inventory movement plus audit log. Repeated release calls return an already-released result.
+- Inventory adjustment locks the product or variant row, prevents stock going negative or below reserved quantity, enforces the single-item stock ceiling, and records an event key and audit log.
+- Refund creation requires `refunds.manage`, a cancelled order with verified payment, a positive amount matching currency decimal precision, and checks pending/processing/completed refunds against the order's remaining refundable balance while holding the order row lock. Refund status transitions are constrained and completion requires an external transfer reference.
+- `process_order_deadline_notifications()` is executable by `service_role`, not anon/authenticated. The scheduled function marks deadlines overdue and creates idempotent notifications; its body explicitly does not automatically cancel orders or release stock.
+- The older `submit_order` RPC is not executable by anon or authenticated. The confirmed order-submission RPCs are executable by authenticated users and validate caller identity, cart ownership, stock, quote totals, currency, and payment-proof storage path/metadata.
+- Reviewed trigger functions use fixed function-level search paths; trigger-only functions are not directly executable by anon/authenticated.
+
+### Finding — shipping address payload validation is too permissive
+
+Severity: **Medium (input validation / operational integrity; not an authorization bypass)**
+
+`request_shipping_address_change` checks that `jsonb_typeof(p_address) <> 'object'`, but it does not reject an empty JSON object (`{}`) or validate required address fields. The destination column is NOT NULL, but the live schema has no CHECK constraint requiring a non-empty object or required keys. A customer can therefore submit an empty object as the requested address; if an administrator approves it, `review_shipping_address_change` copies that object into the order's `shipping_address`.
+
+The NULL case is rejected downstream by the NOT NULL column constraint, so this is not a NULL-injection bypass. The concrete issue is that an empty/incomplete object can pass the RPC and later replace a valid delivery address.
+
+Recommended remediation (not applied): define the canonical address JSON contract used by checkout, validate its required keys and non-empty values in this RPC, and add a matching database CHECK constraint where compatible with existing rows. Add tests for NULL, `{}`, missing country/postcode/address lines, and valid payloads. Review existing customer address formats before enforcing the constraint.
+
+### Remaining scope / limitations
+
+- This was a targeted review of relevant functions, not a full review of every SECURITY DEFINER function body.
+- Currency price synchronization and currency-catalog trigger functions were inspected for fixed search paths and trigger-oriented behavior; their full end-to-end trigger dependency chain and data invariants still need a separate pass.
+- No live checkout, cancellation, refund, or inventory mutation was executed as a test. Production remained read-only.
+
+### Updated conclusion
+
+No direct privilege escalation was confirmed in the functions inspected in this follow-up. One concrete medium-severity validation weakness was found in customer shipping-address change requests: empty/incomplete address objects can be approved and overwrite a valid order address. The `app_private` exposure and Owner self-deactivation questions from the first pass remain open.
+
+All findings are observations from read-only Production inspection. No Production data, schema, grants, or deployment state was changed.
