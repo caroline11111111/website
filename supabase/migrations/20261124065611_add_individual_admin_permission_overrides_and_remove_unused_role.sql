@@ -1,3 +1,4 @@
+
 -- Remove the unused placeholder role only when it has no assignments or permission links.
 DO $$
 BEGIN
