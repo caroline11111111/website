@@ -89,7 +89,8 @@ All test fixtures were created and rolled back inside the isolated test project:
 - An admin with `refunds.manage` could delete and upload refund-evidence objects.
 - The direct SQL test temporarily disabled Storage's protective delete trigger inside the transaction to isolate the RLS policy behavior; no Storage API or Production object was changed.
 - `request_shipping_address_change()` rejected an incomplete address, accepted a complete address, and the CHECK constraint rejected an invalid order address update.
-- All fixture users, orders, requests, and Storage rows were rolled back.
+- Shipping currency sync: a temporary shipping rate created only the MYR price when CNY/SGD/USD had no configured positive FX rate; after a stale CNY price was inserted, the next sync removed it and updated the MYR amount. This confirms no synthetic 1:1 converted price is generated.
+- All fixture users, orders, requests, Storage rows, shipping zones, rates, and converted prices were rolled back.
 
 These are isolated database-level tests, not a full browser/API integration test of the customer and admin applications.
 
