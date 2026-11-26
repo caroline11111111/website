@@ -106,7 +106,8 @@ All fixtures were created inside transactions in the test project and rolled bac
 - The Storage delete-protection trigger was temporarily disabled only inside that transaction to isolate the RLS policy behavior; all test rows were rolled back. This was a database-level policy test, not a Storage HTTP API test.
 - Shipping address change RPC: incomplete address JSON was rejected; a complete address request was accepted and recorded.
 - Shipping address CHECK constraint: an invalid update to an order's shipping address was rejected.
-- All test Auth users, orders, address requests, and Storage object fixtures were rolled back.
+- Shipping currency sync: MYR values updated normally; unconfigured CNY/SGD/USD rows were not synthesized, and a stale CNY row was deleted on the next sync.
+- All test Auth users, orders, address requests, Storage objects, shipping zones, and shipping-rate fixtures were rolled back.
 
 ## Remaining review items
 
