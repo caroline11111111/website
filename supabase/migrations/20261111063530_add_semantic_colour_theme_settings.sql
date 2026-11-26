@@ -1,6 +1,3 @@
--- Keep the default semantic colour theme available to the storefront.
--- Public clients may read only this theme setting; all other site settings
--- remain protected by their existing policies.
 
 grant select on table public.site_settings to anon, authenticated;
 
