@@ -183,3 +183,8 @@ These observations are policy-definition reviews, not end-to-end API or file-dow
 - A concrete Medium-severity Storage authorization issue was identified: refunds.view alone appears sufficient to DELETE objects from refund-evidence because a FOR ALL policy combines a broad USING expression with a narrower WITH CHECK.
 - The previously recorded Medium-severity shipping-address payload validation issue and Low-severity shipping-currency fallback issue remain open.
 - Production remained read-only: no schema, grants, policies, rows, Storage objects, or deployment state were changed.
+Additional role-model verification for the refund-evidence finding:
+- The built-in Admin and Owner roles currently both include refunds.view and refunds.manage.
+- The live admin_user_permission_overrides table currently has no explicit deny override for either permission (and was observed empty in the table inventory). Thus no current view-only admin account was identified from the present role/override snapshot.
+- The permission model does support per-user permission overrides, including revoking refunds.manage while retaining refunds.view. The Storage policy therefore becomes exploitable if such a view-only account is configured in future; the policy is not least-privilege safe even though the current default roles bundle both permissions.
+- refund-evidence is a private bucket with a 5 MiB limit and JPEG/PNG/WebP allowlist; public=false.
