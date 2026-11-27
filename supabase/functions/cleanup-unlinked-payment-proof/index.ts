@@ -49,8 +49,8 @@ Deno.serve(async (req: Request) => {
   }
   if (typeof path !== "string") return json({ error: "Invalid storage path" }, 400, origin);
 
-  const safeUserId = user.id.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\$&");
-  const allowedPath = new RegExp(`^${safeUserId}/[0-9a-fA-F-]{36}\\\\.(jpg|png|pdf)$`);
+  // Supabase Auth user IDs are UUIDs, so the literal UUID is safe in this pattern.
+  const allowedPath = new RegExp("^" + user.id + "/[0-9a-fA-F-]{36}\\\\.(jpg|png|pdf)$");
   if (!allowedPath.test(path)) return json({ error: "Storage path is not owned by this user" }, 403, origin);
 
   const admin = createClient(supabaseUrl, serviceRoleKey, {
