@@ -70,7 +70,15 @@ Deno.serve(async (req: Request) => {
     const createdUserId = created.user.id;
     const { data: adminRow, error: adminInsertError } = await adminClient
       .from("admin_users").insert({ user_id: createdUserId, is_active: true }).select("id").single();
-    if (adminInsertError || !adminRow) return respond({ error: "Auth account created, but Admin registration failed. Do not ask this user to sign in; contact the Owner to complete or disable the account. " + (adminInsertError?.message || "") }, 500);
+    if (adminInsertError || !adminRow) {
+      const { error: cleanupError } = await adminClient.auth.admin.deleteUser(createdUserId);
+      const cleanupMessage = cleanupError
+        ? " Auth account cleanup also failed; the Owner must inspect and remove the orphaned Auth account."
+        : " The incomplete Auth account was removed.";
+      return respond({
+        error: "Admin registration failed. " + (adminInsertError?.message || "") + cleanupMessage,
+      }, 500);
+    }
     const { error: roleInsertError } = await adminClient.from("admin_user_roles").insert({
       admin_user_id: adminRow.id, role_id: role.id, assigned_by: authData.user.id,
     });
@@ -148,8 +156,14 @@ Deno.serve(async (req: Request) => {
   const { error: updateError } = await adminClient.auth.admin.updateUserById(targetUserId, { password: newPassword });
   if (updateError) return respond({ error: "Password could not be updated. " + updateError.message, }, 400);
 
+  const { data: actorAdmin } = await adminClient
+    .from("admin_users")
+    .select("id")
+    .eq("user_id", authData.user.id)
+    .maybeSingle();
+
   const { error: auditError } = await adminClient.from("admin_audit_logs").insert({
-    admin_user_id: targetAdmin?.id || null,
+    admin_user_id: actorAdmin?.id || null,
     actor_user_id: authData.user.id,
     action: "account.password.overwrite",
     target_type: requestedType === "admin" ? "admin_account" : "client_account",
